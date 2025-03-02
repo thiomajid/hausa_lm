@@ -1,0 +1,21 @@
+[project]
+name = "hausa-lm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "accelerate>=1.4.0",
+    "datasets>=3.3.2",
+    "einops>=0.8.1",
+    "matplotlib>=3.10.1",
+    "safetensors>=0.5.3",
+    "torch>=2.6.0",
+    "transformers>=4.49.0",
+    "xlstm>=2.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "tensorboard>=2.19.0",
+]
