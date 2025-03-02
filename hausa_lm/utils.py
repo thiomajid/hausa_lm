@@ -26,14 +26,17 @@ def model_summary(model: HausaLMForCausalLM):
 
     total_parameters = embedding + lm_head + xlstm_size
 
+    def ratio(x):
+        return round(x / total_parameters, 2) * 100
+
     return ModelSummary(
         total=total_parameters,
         billion=total_parameters / 1e9,
         million=total_parameters / one_million,
         embedding=embedding / one_million,
-        embedding_ratio=embedding / total_parameters,
+        embedding_ratio=ratio(embedding),
         lm_head=lm_head / one_million,
-        lm_head_ratio=lm_head / total_parameters,
+        lm_head_ratio=ratio(lm_head),
         xlstm=xlstm_size / one_million,
-        xlstm_ratio=xlstm_size / total_parameters,
+        xlstm_ratio=ratio(xlstm_size),
     )
