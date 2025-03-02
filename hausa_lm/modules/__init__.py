@@ -1,6 +1,6 @@
-from .model import HausaLMModel, HausaLMModelForCausalLM
+from .model import HausaLMForCausalLM, HausaLMModel
 
 __all__ = [
     "HausaLMModel",
-    "HausaLMModelForCausalLM",
+    "HausaLMForCausalLM",
 ]

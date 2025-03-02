@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from hausa_lm.modules.model import HausaLMModelForCausalLM
+from hausa_lm.modules.model import HausaLMForCausalLM
 
 
 @dataclass
@@ -16,7 +16,7 @@ class ModelSummary:
     xlstm_ratio: float
 
 
-def model_summary(model: HausaLMModelForCausalLM):
+def model_summary(model: HausaLMForCausalLM):
     embedding = sum(p.numel() for p in model.model.token_embedding.parameters())
     lm_head = sum(p.numel() for p in model.lm_head.parameters())
 

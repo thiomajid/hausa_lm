@@ -1,10 +1,10 @@
 from .config import HausaLMConfig
-from .modules import HausaLMModel, HausaLMModelForCausalLM
+from .modules import HausaLMForCausalLM, HausaLMModel
 from .trainer import HausaLMTrainer, HausaLMTrainingArgs
 
 __all__ = [
     "HausaLMModel",
-    "HausaLMModelForCausalLM",
+    "HausaLMForCausalLM",
     "HausaLMTrainer",
     "HausaLMTrainingArgs",
     "HausaLMConfig",

@@ -1,7 +1,7 @@
 from transformers import AutoTokenizer, Trainer
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
-from hausa_lm.modules import HausaLMModelForCausalLM
+from hausa_lm.modules import HausaLMForCausalLM
 
 from .arguments import HausaLMTrainingArgs
 
@@ -9,7 +9,7 @@ from .arguments import HausaLMTrainingArgs
 class HausaLMTrainer(Trainer):
     def __init__(
         self,
-        model: HausaLMModelForCausalLM,
+        model: HausaLMForCausalLM,
         args: HausaLMTrainingArgs,
         tokenizer: AutoTokenizer,
         **kwargs,

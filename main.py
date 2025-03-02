@@ -1,6 +1,6 @@
 import torch
 
-from hausa_lm import HausaLMConfig, HausaLMModelForCausalLM
+from hausa_lm import HausaLMConfig, HausaLMForCausalLM
 from hausa_lm.utils import model_summary
 
 if __name__ == "__main__":
@@ -9,7 +9,7 @@ if __name__ == "__main__":
     # args = cast(HausaLMTrainingArgs, args)
 
     config = HausaLMConfig.from_yaml("./model_config.yaml")
-    model = HausaLMModelForCausalLM(config)
+    model = HausaLMForCausalLM(config)
 
     model_summary(model)
 

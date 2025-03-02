@@ -14,6 +14,8 @@ from hausa_lm.config import HausaLMConfig
 
 
 class HausaLMModel(PreTrainedModel):
+    config_class = HausaLMConfig
+
     def __init__(self, config: HausaLMConfig, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
 
@@ -40,7 +42,9 @@ class HausaLMModel(PreTrainedModel):
         return hidden_states
 
 
-class HausaLMModelForCausalLM(PreTrainedModel):
+class HausaLMForCausalLM(PreTrainedModel):
+    config_class = HausaLMConfig
+
     def __init__(self, config: HausaLMConfig, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
 
@@ -93,7 +97,7 @@ class HausaLMModelForCausalLM(PreTrainedModel):
         hf_repo: str,
         filename: Path | str,
         device: str = "cuda",
-    ) -> "HausaLMModelForCausalLM":
+    ) -> "HausaLMForCausalLM":
         if isinstance(filename, str):
             filename = Path(filename)
 
@@ -101,7 +105,7 @@ class HausaLMModelForCausalLM(PreTrainedModel):
             raise FileNotFoundError(f"{filename} does not exist on the disk.")
 
         config = HausaLMConfig.from_pretrained(hf_repo)
-        model = HausaLMModelForCausalLM(config=config)
+        model = HausaLMForCausalLM(config=config)
         safetensors.torch.load_model(model=model, filename=filename, device=device)
         model = model.to(device)
 
