@@ -1,15 +1,12 @@
-from typing import cast
-
 import torch
-from transformers import HfArgumentParser
 
-from hausa_lm import HausaLMConfig, HausaLMModelForCausalLM, HausaLMTrainingArgs
+from hausa_lm import HausaLMConfig, HausaLMModelForCausalLM
 from hausa_lm.utils import model_summary
 
 if __name__ == "__main__":
-    parser = HfArgumentParser(HausaLMTrainingArgs)
-    args = parser.parse_yaml_file("./trainer_arguments.yaml")[0]
-    args = cast(HausaLMTrainingArgs, args)
+    # parser = HfArgumentParser(HausaLMTrainingArgs)
+    # args = parser.parse_yaml_file("./trainer_arguments.yaml")[0]
+    # args = cast(HausaLMTrainingArgs, args)
 
     config = HausaLMConfig.from_yaml("./model_config.yaml")
     model = HausaLMModelForCausalLM(config)

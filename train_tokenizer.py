@@ -83,7 +83,7 @@ if __name__ == "__main__":
         "--subset", type=str, default=None, help="Dataset subset to use (optional)"
     )
     parser.add_argument(
-        "--vocab_size", type=int, default=32000, help="Size of the vocabulary"
+        "--vocab_size", type=int, default=49152, help="Size of the vocabulary"
     )
     parser.add_argument(
         "--output_dir",

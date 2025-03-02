@@ -1,19 +1,20 @@
-vocab_size: 49_152
-context_length: 1024
-num_blocks: 24
-slstm_at: [0, 6, 12, 18]
-embedding_dim: 960
-mlstm_block:
-  mlstm:
-    conv1d_kernel_size: 4
-    qkv_proj_blocksize: 32
-    num_heads: 8
-slstm_block:
-  slstm:
-    backend: "vanilla"
-    num_heads: 8
-    conv1d_kernel_size: 4
-    bias_init: "powerlaw_blockdependent"
-  feedforward:
-    proj_factor: 1.7
-    act_fn: "swish"
+xlstm_config:
+  vocab_size: 49_152
+  context_length: 1024
+  num_blocks: 24
+  slstm_at: [0, 6, 12, 18]
+  embedding_dim: 960
+  mlstm_block:
+    mlstm:
+      conv1d_kernel_size: 4
+      qkv_proj_blocksize: 32
+      num_heads: 8
+  slstm_block:
+    slstm:
+      backend: "vanilla"
+      num_heads: 8
+      conv1d_kernel_size: 4
+      bias_init: "powerlaw_blockdependent"
+    feedforward:
+      proj_factor: 1.7
+      act_fn: "swish"
