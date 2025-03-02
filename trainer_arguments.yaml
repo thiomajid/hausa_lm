@@ -1,7 +1,7 @@
 # Custom training arguments
 tokenizer: "HuggingFaceTB/SmolLM2-1.7B"
 xlstm_config_path: "./model_config.yaml"
-features: ["text"]
+features: ["tweet"]
 
 dataset_url: "HausaNLP/AfriSenti-Twitter"
 train_subset: "hau"
