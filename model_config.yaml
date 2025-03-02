@@ -1,8 +1,8 @@
 xlstm_config:
   vocab_size: 49_152
   context_length: 1024
-  num_blocks: 30
-  slstm_at: [0, 6, 12, 18, 24]
+  num_blocks: 24
+  slstm_at: [0, 6, 12, 18]
   embedding_dim: 960
   mlstm_block:
     mlstm:
