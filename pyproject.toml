@@ -5,17 +5,17 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "accelerate>=1.4.0",
-    "datasets>=3.3.2",
-    "einops>=0.8.1",
+    "accelerate>=1.0.1",
+    "datasets>=3.0.1",
+    "einops>=0.8.0",
     "matplotlib>=3.10.1",
-    "safetensors>=0.5.3",
-    "torch>=2.6.0",
-    "transformers>=4.49.0",
-    "xlstm>=2.0.2",
+    "safetensors>=0.4.5",
+    "seaborn>=0.13.2",
+    "torch>=2.4.1",
+    "torch-tb-profiler>=0.4.3",
+    "transformers>=4.45.2",
+    "xlstm>=1.0.6",
 ]
 
 [dependency-groups]
-dev = [
-    "tensorboard>=2.19.0",
-]
+dev = ["tensorboard>=2.19.0"]
