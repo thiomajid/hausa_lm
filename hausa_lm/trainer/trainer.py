@@ -26,14 +26,14 @@ class HausaLMTrainer(Trainer):
     ):
         outputs: CausalLMOutputWithPast = model(**inputs)
         loss = outputs.loss
-        perplexity = loss.exp().item()
+        # perplexity = loss.exp().item()
 
-        metrics = {
-            "ce_loss": loss.item(),
-            "perplexity": perplexity,
-        }
+        # metrics = {
+        #     "ce_loss": loss.item(),
+        #     "perplexity": perplexity,
+        # }
 
-        self.log(metrics)
+        # self.log(metrics)
 
         if return_outputs:
             return (loss, outputs)
