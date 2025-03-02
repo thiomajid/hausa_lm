@@ -3,7 +3,7 @@ xlstm_config:
   context_length: 1024
   num_blocks: 30
   slstm_at: [0, 6, 12, 18, 24]
-  embedding_dim: 1024
+  embedding_dim: 960
   mlstm_block:
     mlstm:
       conv1d_kernel_size: 4
