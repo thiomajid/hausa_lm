@@ -15,10 +15,16 @@ def train_tokenizer(
     vocab_size: Optional[int] = None,
     output_dir: str = "./tokenizer",
     batch_size: int = 1000,
+    push_to_hub: bool = False,
+    model_id: Optional[str] = None,
+    trust_remote_code: bool = False,
+    token: Optional[str] = None,
 ):
     """Train a new tokenizer based on an existing one using a dataset."""
     print(f"Loading base tokenizer: {base_tokenizer_name}")
-    base_tokenizer = AutoTokenizer.from_pretrained(base_tokenizer_name)
+    base_tokenizer = AutoTokenizer.from_pretrained(
+        base_tokenizer_name, trust_remote_code=trust_remote_code
+    )
 
     # Use the base tokenizer's vocab size if none is provided
     if vocab_size is None:
@@ -27,9 +33,18 @@ def train_tokenizer(
 
     print(f"Loading dataset: {dataset_url}")
     if subset:
-        dataset = load_dataset(dataset_url, subset, split=split)
+        dataset = load_dataset(
+            dataset_url,
+            subset,
+            split=split,
+            trust_remote_code=trust_remote_code,
+        )
     else:
-        dataset = load_dataset(dataset_url, split=split)
+        dataset = load_dataset(
+            dataset_url,
+            split=split,
+            trust_remote_code=trust_remote_code,
+        )
 
     def batch_iterator():
         """Returns batches of texts from the dataset."""
@@ -49,6 +64,11 @@ def train_tokenizer(
     # Save the new tokenizer
     print(f"Saving tokenizer to {output_dir}")
     new_tokenizer.save_pretrained(output_dir)
+
+    # Push to Hub if requested
+    if push_to_hub:
+        print(f"Pushing tokenizer to the Hub with model ID: {model_id}")
+        new_tokenizer.push_to_hub(model_id, token=token)
 
     print(
         f"New tokenizer trained and saved successfully with vocab size: {new_tokenizer.vocab_size}"
@@ -94,6 +114,22 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch_size", type=int, default=1000, help="Batch size for processing texts"
     )
+    parser.add_argument(
+        "--push_to_hub",
+        action="store_true",
+        help="Whether to push the tokenizer to the Hub",
+    )
+    parser.add_argument(
+        "--model_id", type=str, default=None, help="Model ID for pushing to the Hub"
+    )
+    parser.add_argument(
+        "--trust_remote_code",
+        action="store_true",
+        help="Whether to trust remote code when loading the tokenizer",
+    )
+    parser.add_argument(
+        "--token", type=str, default=None, help="Hugging Face token for pushing to Hub"
+    )
 
     args = parser.parse_args()
 
@@ -106,4 +142,8 @@ if __name__ == "__main__":
         args.vocab_size,
         args.output_dir,
         args.batch_size,
+        args.push_to_hub,
+        args.model_id,
+        args.trust_remote_code,
+        args.token,
     )
