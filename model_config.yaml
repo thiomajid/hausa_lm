@@ -1,18 +1,18 @@
 text_config:
   vocab_size: 49_152
-  context_length: 128
-  num_blocks: 20
-  slstm_at: [0, 2, 4, 6, 8, 12, 14, 16, 18]
-  embedding_dim: 720
+  context_length: 2048
+  num_blocks: 30
+  slstm_at: [0, 6, 12, 18, 24]
+  embedding_dim: 1024
   mlstm_block:
     mlstm:
       conv1d_kernel_size: 4
       qkv_proj_blocksize: 32
-      num_heads: 4
+      num_heads: 8
   slstm_block:
     slstm:
       backend: "vanilla"
-      num_heads: 4
+      num_heads: 8
       conv1d_kernel_size: 4
       bias_init: "powerlaw_blockdependent"
     feedforward:
