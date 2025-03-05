@@ -5,12 +5,13 @@ from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
     AutoTokenizer,
+    DataCollatorForLanguageModeling,
     HfArgumentParser,
+    Trainer,
 )
 
 from hausa_lm.data import get_dataset
 from hausa_lm.trainer.arguments import HausaLMTrainingArgs
-from hausa_lm.trainer.trainer import HausaLMTrainer
 
 #!/usr/bin/env python3
 
@@ -131,13 +132,20 @@ def main():
     )
 
     training_args.hub_token = hf_token
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer,
+        mlm=False,
+        return_tensors="pt",
+    )
+
     # Initialize trainer
-    trainer = HausaLMTrainer(
+    trainer = Trainer(
         model=model,
         args=training_args,
         tokenizer=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
+        data_collator=data_collator,
     )
 
     print("Starting training")
