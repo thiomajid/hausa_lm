@@ -27,30 +27,6 @@ Despite being spoken by over 70 million people, Hausa remains underrepresented i
 
 Contributions are welcome! Whether you're a native Hausa speaker, ML practitioner, or NLP researcher, your input can help improve these resources.
 
-## Installation
-
-To set up the development environment for this project:
-
-1. Create a virtual environment using `uv`:
-
-   ```bash
-   uv venv
-   ```
-
-2. Activate the virtual environment:
-
-   ```bash
-   # On Unix/Linux/macOS
-   source .venv/bin/activate
-   # On Windows
-   .venv\Scripts\activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   uv pip install pyproject.toml -e .
-   ```
-
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
