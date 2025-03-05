@@ -130,6 +130,7 @@ def main():
         trust_remote_code=args.trust_remote_code,
     )
 
+    training_args.hub_token = hf_token
     # Initialize trainer
     trainer = HausaLMTrainer(
         model=model,
