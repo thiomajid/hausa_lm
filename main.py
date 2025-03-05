@@ -14,7 +14,7 @@ if __name__ == "__main__":
     model_summary(model)
 
     dummy_input = torch.randint(
-        1, 100, (2, config.xlstm_config.context_length), device=model.device
+        1, 100, (2, config.text_config.context_length), device=model.device
     )
 
     outputs = model(dummy_input)

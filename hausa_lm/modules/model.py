@@ -22,17 +22,17 @@ class HausaLMModel(PreTrainedModel):
         self.config = config
 
         self.token_embedding = nn.Embedding(
-            num_embeddings=config.xlstm_config.vocab_size,
-            embedding_dim=config.xlstm_config.embedding_dim,
+            num_embeddings=config.text_config.vocab_size,
+            embedding_dim=config.text_config.embedding_dim,
         )
 
         self.embedding_dropout = (
             nn.Dropout(config.dropout)
-            if config.xlstm_config.add_embedding_dropout
+            if config.text_config.add_embedding_dropout
             else nn.Identity()
         )
 
-        self.xlstm = xLSTMBlockStack(config.xlstm_config)
+        self.xlstm = xLSTMBlockStack(config.text_config)
 
     def forward(self, input_ids: torch.Tensor, **kwargs):
         hidden_states = self.token_embedding(input_ids)
@@ -52,11 +52,11 @@ class HausaLMForCausalLM(PreTrainedModel):
 
         self.model = HausaLMModel(config)
         self.lm_head = nn.Linear(
-            config.xlstm_config.embedding_dim,
-            config.xlstm_config.vocab_size,
+            config.text_config.embedding_dim,
+            config.text_config.vocab_size,
         )
 
-        if config.xlstm_config.tie_weights:
+        if config.text_config.tie_weights:
             self.lm_head.weight = self.model.token_embedding.weight
 
     def forward(

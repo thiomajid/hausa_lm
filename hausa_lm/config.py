@@ -1,4 +1,4 @@
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import Any, Optional
 
 import yaml
@@ -13,26 +13,54 @@ from xlstm import (
 )
 
 
+@dataclass
+class ConstrastiveLSTMVisionConfig:
+    # These arguments are used in the ViLLayer
+    dim: int = 192
+    direction: str
+    expansion: int
+    conv_kind: str = "2d"
+    conv_bias: bool = True
+    seqlens: Optional[int] = None
+    input_shape: tuple = (3, 224, 224)
+    patch_size: int = 16
+    depth: int = 12
+    output_shape: tuple = (1000,)
+    mode: str = "classifier"
+    pooling: str = "bilateral_flatten"
+    drop_path_rate: float = 0.0
+    drop_path_decay: bool = False
+    stride: Optional[int] = None
+    legacy_norm: bool = False
+    conv_kernel_size: int = 3
+    proj_bias: bool = True
+    norm_bias: bool = True
+    init_weights: str = "original"
+    mlstm_config: mLSTMLayerConfig
+
+
 class HausaLMConfig(PretrainedConfig):
     model_type = "xlstm"
 
     def __init__(
         self,
-        xlstm_config: Optional[xLSTMLMModelConfig] = None,
+        text_config: Optional[xLSTMLMModelConfig] = None,
+        vision_config: Optional[ConstrastiveLSTMVisionConfig] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
-        if xlstm_config is None:
-            xlstm_config = xLSTMLMModelConfig()
+        if text_config is None:
+            text_config = xLSTMLMModelConfig()
 
-        self.xlstm_config = xlstm_config
+        self.text_config = text_config
+        self.vision_config = vision_config
 
     def to_dict(self) -> dict[str, Any]:
         output = super().to_dict()
 
-        # Making sure that 'xlstm_config' is serialized
-        output["xlstm_config"] = asdict(self.xlstm_config)
+        # Making sure that 'text_config' is serialized
+        output["text_config"] = asdict(self.text_config)
         return output
 
     @staticmethod
@@ -44,10 +72,10 @@ class HausaLMConfig(PretrainedConfig):
 
     @classmethod
     def from_dict(cls, config_dict, **kwargs):
-        xlstm_config_dict: dict[str, Any] = config_dict.pop("xlstm_config")
-        xlstm_config = cls.parse_xlstm_config_dict(xlstm_config_dict)
+        text_config_dict: dict[str, Any] = config_dict.pop("text_config")
+        text_config = cls.parse_xlstm_config_dict(text_config_dict)
 
-        return cls(xlstm_config=xlstm_config, **config_dict)
+        return cls(text_config=text_config, **config_dict)
 
     @staticmethod
     def parse_xlstm_config_dict(config_dict: dict[str, Any]):
