@@ -85,7 +85,7 @@ def main():
         args.tokenizer_id, token=hf_token, trust_remote_code=args.trust_remote_code
     )
 
-    print(f"Loading model configuration from {args.config_path}")
+    print(f"Loading model configuration from {training_args.xlstm_config_path}")
     config = HausaLMConfig.from_yaml(training_args.xlstm_config_path)
 
     print("Initializing HausaLM model")
