@@ -1,4 +1,4 @@
-xlstm_config:
+text_config:
   vocab_size: 49_152
   context_length: 256
   num_blocks: 24
