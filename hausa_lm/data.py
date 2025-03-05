@@ -16,15 +16,27 @@ def get_dataset(
     split: str,
     n_samples: Union[int, Literal["all"]] = "all",
     token: Optional[str] = None,
+    trust_remote_code: Optional[bool] = False,
 ):
     data_stream: Optional[IterableDataset] = None
 
     if subset is not None:
         data_stream = load_dataset(
-            hub_url, subset, split=split, streaming=True, token=token
+            hub_url,
+            subset,
+            split=split,
+            streaming=True,
+            token=token,
+            trust_remote_code=trust_remote_code,
         )
     else:
-        data_stream = load_dataset(hub_url, split=split, streaming=True, token=token)
+        data_stream = load_dataset(
+            hub_url,
+            split=split,
+            streaming=True,
+            token=token,
+            trust_remote_code=trust_remote_code,
+        )
 
     data_points = []
 

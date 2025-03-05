@@ -59,6 +59,11 @@ def main():
     parser.add_argument(
         "--features", nargs="+", default=["text"], help="Dataset features to use"
     )
+    parser.add_argument(
+        "--trust_remote_code",
+        action="store_true",
+        help="Trust remote code when loading models from the Hub",
+    )
 
     args = parser.parse_args()
 
@@ -85,12 +90,18 @@ def main():
     tokenizer_id = args.tokenizer_id or args.source_model_id
 
     print(f"Downloading tokenizer from {tokenizer_id}")
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_id, token=hf_token)
+    tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer_id, token=hf_token, trust_remote_code=args.trust_remote_code
+    )
 
     print(f"Loading model configuration from {args.source_model_id}")
     # Load config from pretrained model but initialize model with random weights
-    config = AutoConfig.from_pretrained(args.source_model_id, token=hf_token)
-    model = AutoModelForCausalLM.from_config(config)
+    config = AutoConfig.from_pretrained(
+        args.source_model_id, token=hf_token, trust_remote_code=args.trust_remote_code
+    )
+    model = AutoModelForCausalLM.from_config(
+        config, trust_remote_code=args.trust_remote_code
+    )
     print("Initialized model with random weights")
 
     print("Loading training dataset")
@@ -103,6 +114,7 @@ def main():
         split=training_args.train_split,
         n_samples=training_args.train_samples,
         token=hf_token,
+        trust_remote_code=args.trust_remote_code,
     )
 
     print("Loading evaluation dataset")
@@ -115,6 +127,7 @@ def main():
         split=training_args.eval_split,
         n_samples=training_args.eval_samples,
         token=hf_token,
+        trust_remote_code=args.trust_remote_code,
     )
 
     # Initialize trainer
@@ -129,13 +142,12 @@ def main():
     print("Starting training")
     trainer.train()
 
-    print("Evaluating model")
-    eval_results = trainer.evaluate()
-    print(f"Evaluation results: {eval_results}")
-
     print(f"Pushing model to Hugging Face Hub: {args.target_model_id}")
     trainer.save_model()
-    trainer.push_to_hub(repo_id=args.target_model_id, use_auth_token=hf_token)
+    trainer.push_to_hub(
+        repo_id=args.target_model_id,
+        token=hf_token,
+    )
 
     print(f"✅ Model successfully fine-tuned and pushed to {args.target_model_id}")
 
