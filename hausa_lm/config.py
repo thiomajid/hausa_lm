@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from typing import Any, Optional
 
 import yaml
@@ -12,31 +12,30 @@ from xlstm import (
     xLSTMLMModelConfig,
 )
 
-
-@dataclass
-class ConstrastiveLSTMVisionConfig:
-    # These arguments are used in the ViLLayer
-    dim: int = 192
-    direction: str
-    expansion: int
-    conv_kind: str = "2d"
-    conv_bias: bool = True
-    seqlens: Optional[int] = None
-    input_shape: tuple = (3, 224, 224)
-    patch_size: int = 16
-    depth: int = 12
-    output_shape: tuple = (1000,)
-    mode: str = "classifier"
-    pooling: str = "bilateral_flatten"
-    drop_path_rate: float = 0.0
-    drop_path_decay: bool = False
-    stride: Optional[int] = None
-    legacy_norm: bool = False
-    conv_kernel_size: int = 3
-    proj_bias: bool = True
-    norm_bias: bool = True
-    init_weights: str = "original"
-    mlstm_config: mLSTMLayerConfig
+# @dataclass
+# class ConstrastiveLSTMVisionConfig:
+#     # These arguments are used in the ViLLayer
+#     dim: int = 192
+#     direction: str
+#     expansion: int
+#     conv_kind: str = "2d"
+#     conv_bias: bool = True
+#     seqlens: Optional[int] = None
+#     input_shape: tuple = (3, 224, 224)
+#     patch_size: int = 16
+#     depth: int = 12
+#     output_shape: tuple = (1000,)
+#     mode: str = "classifier"
+#     pooling: str = "bilateral_flatten"
+#     drop_path_rate: float = 0.0
+#     drop_path_decay: bool = False
+#     stride: Optional[int] = None
+#     legacy_norm: bool = False
+#     conv_kernel_size: int = 3
+#     proj_bias: bool = True
+#     norm_bias: bool = True
+#     init_weights: str = "original"
+#     mlstm_config: mLSTMLayerConfig
 
 
 class HausaLMConfig(PretrainedConfig):
@@ -45,7 +44,7 @@ class HausaLMConfig(PretrainedConfig):
     def __init__(
         self,
         text_config: Optional[xLSTMLMModelConfig] = None,
-        vision_config: Optional[ConstrastiveLSTMVisionConfig] = None,
+        # vision_config: Optional[ConstrastiveLSTMVisionConfig] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -54,7 +53,7 @@ class HausaLMConfig(PretrainedConfig):
             text_config = xLSTMLMModelConfig()
 
         self.text_config = text_config
-        self.vision_config = vision_config
+        # self.vision_config = vision_config
 
     def to_dict(self) -> dict[str, Any]:
         output = super().to_dict()

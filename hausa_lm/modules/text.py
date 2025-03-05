@@ -6,7 +6,7 @@ from xlstm import xLSTMBlockStack
 from hausa_lm.config import HausaLMConfig
 
 
-class HausaLMTextModel(nn.Module):
+class HausaLMTextEncoder(nn.Module):
     def __init__(self, config: HausaLMConfig) -> None:
         super().__init__()
 
