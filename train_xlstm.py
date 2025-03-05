@@ -143,12 +143,11 @@ def main():
     trainer.save_model(training_args.output_dir)
 
     print(f"Pushing model to Hugging Face Hub: {training_args.hub_model_id}")
-    trainer.push_to_hub(
-        repo_id=args.target_model_id,
-        token=hf_token,
-    )
+    trainer.push_to_hub(token=hf_token)
 
-    print(f"✅ HausaLM model successfully trained and pushed to {args.target_model_id}")
+    print(
+        f"✅ HausaLM model successfully trained and pushed to {training_args.hub_model_id}"
+    )
 
 
 if __name__ == "__main__":
