@@ -80,9 +80,6 @@ def main():
     training_args.push_to_hub = True
     training_args.hub_model_id = args.target_model_id
 
-    # Create output directory if it doesn't exist
-    os.makedirs(args.output_dir, exist_ok=True)
-
     print(f"Downloading tokenizer from {args.tokenizer_id}")
     tokenizer = AutoTokenizer.from_pretrained(
         args.tokenizer_id, token=hf_token, trust_remote_code=args.trust_remote_code
