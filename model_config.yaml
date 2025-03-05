@@ -1,8 +1,8 @@
 text_config:
   vocab_size: 49_152
   context_length: 256
-  num_blocks: 24
-  slstm_at: [0, 2, 4, 6, 8, 12, 14, 16, 18, 20, 22]
+  num_blocks: 20
+  slstm_at: [0, 2, 4, 6, 8, 12, 14, 16, 18]
   embedding_dim: 576
   mlstm_block:
     mlstm:
