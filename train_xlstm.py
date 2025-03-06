@@ -90,9 +90,9 @@ def main():
 
     print("Initializing HausaLM model")
     model = HausaLMForCausalLM(config=config)
-    print(
-        f"Model initialized with {sum(p.numel() for p in model.parameters())} parameters"
-    )
+
+    param_count = sum(p.numel() for p in model.parameters()) / 1e6
+    print(f"Model initialized with {param_count:.2f} million parameters")
 
     print("Loading training dataset")
     train_dataset = get_dataset(
