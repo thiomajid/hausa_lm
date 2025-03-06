@@ -98,7 +98,10 @@ def main():
     print(f"Loading model configuration from {args.source_model_id}")
     # Load config from pretrained model but initialize model with random weights
     config = AutoConfig.from_pretrained(
-        args.source_model_id, token=hf_token, trust_remote_code=args.trust_remote_code
+        args.source_model_id,
+        vocab_size=tokenizer.vocab_size,
+        token=hf_token,
+        trust_remote_code=args.trust_remote_code,
     )
     model = AutoModelForCausalLM.from_config(
         config, trust_remote_code=args.trust_remote_code
