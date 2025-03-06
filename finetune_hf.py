@@ -86,6 +86,7 @@ def main():
 
     # Update training args with command line parameters
     training_args.features = args.features
+    training_args.hub_model_id = args.target_model_id
 
     # Determine tokenizer ID (use model ID if not specified)
     tokenizer_id = args.tokenizer_id or args.source_model_id
