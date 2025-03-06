@@ -157,10 +157,7 @@ def main():
 
     print(f"Pushing model to Hugging Face Hub: {args.target_model_id}")
     trainer.save_model()
-    trainer.push_to_hub(
-        repo_id=args.target_model_id,
-        token=hf_token,
-    )
+    trainer.push_to_hub(token=hf_token)
 
     print(f"✅ Model successfully fine-tuned and pushed to {args.target_model_id}")
 
