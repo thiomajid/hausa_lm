@@ -16,7 +16,7 @@ from hausa_lm.trainer.arguments import HausaLMTrainingArgs
 #!/usr/bin/env python3
 
 
-def main():
+def register_args():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(
         description="Fine-tune a causal language model and push to HF Hub"
@@ -66,7 +66,43 @@ def main():
         help="Trust remote code when loading models from the Hub",
     )
 
-    args = parser.parse_args()
+    # Add new arguments to override training parameters
+    parser.add_argument(
+        "--num_train_epochs",
+        type=int,
+        default=None,
+        help="Override the number of training epochs",
+    )
+    parser.add_argument(
+        "--per_device_train_batch_size",
+        type=int,
+        default=None,
+        help="Override batch size for training",
+    )
+    parser.add_argument(
+        "--per_device_eval_batch_size",
+        type=int,
+        default=None,
+        help="Override batch size for evaluation",
+    )
+    parser.add_argument(
+        "--optim",
+        type=str,
+        default=None,
+        help="Override optimizer (e.g., adamw_torch, adamw_hf)",
+    )
+    parser.add_argument(
+        "--gradient_accumulation_steps",
+        type=int,
+        default=None,
+        help="Override gradient accumulation steps",
+    )
+
+    return parser.parse_args()
+
+
+def main():
+    args = register_args()
 
     # Get HF token from environment if not provided
     hf_token = args.hf_token or os.environ.get("HF_TOKEN")
@@ -87,6 +123,18 @@ def main():
     # Update training args with command line parameters
     training_args.features = args.features
     training_args.hub_model_id = args.target_model_id
+
+    # Overriding training arguments with command line parameters
+    if args.num_train_epochs is not None:
+        training_args.num_train_epochs = args.num_train_epochs
+    if args.per_device_train_batch_size is not None:
+        training_args.per_device_train_batch_size = args.per_device_train_batch_size
+    if args.per_device_eval_batch_size is not None:
+        training_args.per_device_eval_batch_size = args.per_device_eval_batch_size
+    if args.optim is not None:
+        training_args.optim = args.optim
+    if args.gradient_accumulation_steps is not None:
+        training_args.gradient_accumulation_steps = args.gradient_accumulation_steps
 
     # Determine tokenizer ID (use model ID if not specified)
     tokenizer_id = args.tokenizer_id or args.source_model_id
