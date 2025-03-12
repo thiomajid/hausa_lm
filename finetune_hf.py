@@ -98,6 +98,19 @@ def register_args():
         help="Override gradient accumulation steps",
     )
 
+    parser.add_argument(
+        "--fp16",
+        action="store_true",
+        default=False,
+        help="Use 16-bit floating point precision for training",
+    )
+    parser.add_argument(
+        "--no-fp16",
+        action="store_false",
+        dest="fp16",
+        help="Disable 16-bit floating point precision for training",
+    )
+
     return parser.parse_args()
 
 
@@ -123,6 +136,8 @@ def main():
     # Update training args with command line parameters
     training_args.features = args.features
     training_args.hub_model_id = args.target_model_id
+    training_args.hub_token = hf_token
+    training_args.fp16 = args.fp16
 
     # Overriding training arguments with command line parameters
     if args.num_train_epochs is not None:
