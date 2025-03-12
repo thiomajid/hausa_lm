@@ -1,6 +1,7 @@
 import argparse
 import os
 
+from peft import LoraConfig, get_peft_model
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
@@ -111,6 +112,28 @@ def register_args():
         help="Disable 16-bit floating point precision for training",
     )
 
+    parser.add_argument(
+        "--lora",
+        action="store_true",
+        default=False,
+        help="Use LoRA for training",
+    )
+
+    parser.add_argument(
+        "--no-lora",
+        action="store_false",
+        dest="lora",
+        help="Disable LoRA for training",
+    )
+
+    # add argument to target lora modules
+    parser.add_argument(
+        "--target_modules",
+        type=str,
+        default=None,
+        help="Target modules for LoRA training (comma-separated)",
+    )
+
     return parser.parse_args()
 
 
@@ -171,6 +194,30 @@ def main():
         config, trust_remote_code=args.trust_remote_code
     )
     print("Initialized model with random weights")
+
+    if args.lora:
+        print("Applying LoRA configuration")
+        # Apply LoRA configuration
+
+        prefixes = [
+            f"model.layers.{k}.self_attn" for k in range(config.num_hidden_layers)
+        ]
+        selected_proj = args.target_modules.split(",") if args.target_modules else None
+
+        target_modules = [
+            f"{prefix}.{proj}" for prefix in prefixes for proj in selected_proj
+        ]
+
+        lora_config = LoraConfig(
+            inference_mode=False,
+            r=8,
+            lora_alpha=64,
+            lora_dropout=0.2,
+            target_modules=target_modules,
+            bias="none",
+            task_type="CAUSAL_LM",
+        )
+        model = get_peft_model(model, lora_config)
 
     print("Loading training dataset")
     train_dataset = get_dataset(
