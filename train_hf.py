@@ -9,6 +9,7 @@ from transformers import (
     DataCollatorForLanguageModeling,
     HfArgumentParser,
     Trainer,
+    BitsAndBytesConfig
 )
 
 from hausa_lm.data import get_dataset
@@ -147,6 +148,20 @@ def register_args():
         help="LoRA dropout rate",
     )
     
+    parser.add_argument(
+        "--quantize",
+        action="store_true",
+        default=False,
+        help="Use quantization for training",
+    )
+
+    parser.add_argument(
+        "--no-quantize",
+        action="store_false",
+        dest="quantize",
+        help="Disable quantization for training",
+    )
+
 
 
     return parser.parse_args()
@@ -205,8 +220,18 @@ def main():
         token=hf_token,
         trust_remote_code=args.trust_remote_code,
     )
+
+    quantization_config =  BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+    ) if args.quantize else None
+
     model = AutoModelForCausalLM.from_config(
-        config, trust_remote_code=args.trust_remote_code
+        config, 
+        trust_remote_code=args.trust_remote_code,
+        quantization_config=quantization_config,
     )
     print("Initialized model with random weights")
 
@@ -228,6 +253,7 @@ def main():
             ], 
         )
         model = get_peft_model(model, lora_config)
+
 
     print("Loading training dataset")
     train_dataset = get_dataset(
