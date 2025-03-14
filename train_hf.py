@@ -229,6 +229,7 @@ def main():
         bnb_4bit_use_double_quant=True,
     ) if args.quantize else None
 
+    print(f"Loading model from {args.source_model_id}")
     model = AutoModelForCausalLM.from_config(
         config, 
         trust_remote_code=args.trust_remote_code,
@@ -248,10 +249,6 @@ def main():
             target_modules="all-linear",
             bias="none",
             task_type="CAUSAL_LM",
-            modules_to_save=[
-                "lm_head",
-                "embed_tokens",
-            ], 
         )
         model = get_peft_model(model, lora_config)
 
