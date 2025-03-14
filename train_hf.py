@@ -1,6 +1,7 @@
 import argparse
 import os
 
+import torch
 from peft import LoraConfig, get_peft_model
 from transformers import (
     AutoConfig,
@@ -231,7 +232,7 @@ def main():
     model = AutoModelForCausalLM.from_config(
         config, 
         trust_remote_code=args.trust_remote_code,
-        quantization_config=quantization_config,
+        # quantization_config=quantization_config,
     )
     print("Initialized model with random weights")
 
