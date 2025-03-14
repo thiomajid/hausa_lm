@@ -89,7 +89,7 @@ python3 train_xlstm.py \
 - To finetune a model of your choosing already available on Hugging Face
 
 ```bash
-python3 finetune_hf.py \
+python3 train_hf.py \
     --source_model_id "<SOURCE_MODEL_ID>" \
     --target_model_id "<YOUR_MODEL_ID>" \
     --tokenizer_id "<TOKENIZER_ID>" \

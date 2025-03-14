@@ -126,13 +126,28 @@ def register_args():
         help="Disable LoRA for training",
     )
 
-    # add argument to target lora modules
     parser.add_argument(
-        "--target_modules",
-        type=str,
-        default=None,
-        help="Target modules for LoRA training (comma-separated)",
+        "--lora-r",
+        type=int,
+        default=8,
+        help="LoRA rank",
     )
+
+    parser.add_argument(
+        "--lora-alpha",
+        type=int,
+        default=64,
+        help="LoRA alpha",
+    )
+
+    parser.add_argument(
+        "--lora-dropout",
+        type=float,
+        default=0.06,
+        help="LoRA dropout rate",
+    )
+    
+
 
     return parser.parse_args()
 
@@ -197,25 +212,20 @@ def main():
 
     if args.lora:
         print("Applying LoRA configuration")
-        # Apply LoRA configuration
-
-        prefixes = [
-            f"model.layers.{k}.self_attn" for k in range(config.num_hidden_layers)
-        ]
-        selected_proj = args.target_modules.split(",") if args.target_modules else None
-
-        target_modules = [
-            f"{prefix}.{proj}" for prefix in prefixes for proj in selected_proj
-        ]
+        
 
         lora_config = LoraConfig(
             inference_mode=False,
-            r=8,
-            lora_alpha=64,
-            lora_dropout=0.2,
-            target_modules=target_modules,
+            r=args.lora_r,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            target_modules="all-linear",
             bias="none",
             task_type="CAUSAL_LM",
+            modules_to_save=[
+                "lm_head",
+                "embed_tokens",
+            ], 
         )
         model = get_peft_model(model, lora_config)
 
