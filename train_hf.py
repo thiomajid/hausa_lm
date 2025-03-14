@@ -7,10 +7,10 @@ from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
     AutoTokenizer,
+    BitsAndBytesConfig,
     DataCollatorForLanguageModeling,
     HfArgumentParser,
     Trainer,
-    BitsAndBytesConfig
 )
 
 from hausa_lm.data import get_dataset
@@ -148,7 +148,7 @@ def register_args():
         default=0.06,
         help="LoRA dropout rate",
     )
-    
+
     parser.add_argument(
         "--quantize",
         action="store_true",
@@ -163,7 +163,19 @@ def register_args():
         help="Disable quantization for training",
     )
 
+    parser.add_argument(
+        "--logging-steps",
+        type=int,
+        default=500,
+        help="Number of steps between logging",
+    )
 
+    parser.add_argument(
+        "--save-steps",
+        type=int,
+        default=500,
+        help="Number of steps between saving checkpoints",
+    )
 
     return parser.parse_args()
 
@@ -205,6 +217,10 @@ def main():
     if args.gradient_accumulation_steps is not None:
         training_args.gradient_accumulation_steps = args.gradient_accumulation_steps
 
+    # Set logging and saving steps
+    training_args.logging_steps = args.logging_steps
+    training_args.save_steps = args.save_steps
+
     # Determine tokenizer ID (use model ID if not specified)
     tokenizer_id = args.tokenizer_id or args.source_model_id
 
@@ -222,16 +238,20 @@ def main():
         trust_remote_code=args.trust_remote_code,
     )
 
-    quantization_config =  BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-    ) if args.quantize else None
+    quantization_config = (
+        BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+        )
+        if args.quantize
+        else None
+    )
 
     print(f"Loading model from {args.source_model_id}")
     model = AutoModelForCausalLM.from_config(
-        config, 
+        config,
         trust_remote_code=args.trust_remote_code,
         # quantization_config=quantization_config,
     )
@@ -239,7 +259,6 @@ def main():
 
     if args.lora:
         print("Applying LoRA configuration")
-        
 
         lora_config = LoraConfig(
             inference_mode=False,
@@ -253,7 +272,6 @@ def main():
         model = get_peft_model(model, lora_config)
 
         model.print_trainable_parameters()
-
 
     print("Loading training dataset")
     train_dataset = get_dataset(
