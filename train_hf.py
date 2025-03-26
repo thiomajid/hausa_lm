@@ -150,20 +150,6 @@ def register_args():
     )
 
     parser.add_argument(
-        "--quantize",
-        action="store_true",
-        default=False,
-        help="Use quantization for training",
-    )
-
-    parser.add_argument(
-        "--no-quantize",
-        action="store_false",
-        dest="quantize",
-        help="Disable quantization for training",
-    )
-
-    parser.add_argument(
         "--logging-steps",
         type=int,
         default=500,
@@ -175,6 +161,65 @@ def register_args():
         type=int,
         default=500,
         help="Number of steps between saving checkpoints",
+    )
+
+    parser.add_argument("--dataset-url", type=str, help="Dataset URL")
+    parser.add_argument(
+        "--eval-dataset-url",
+        type=str,
+        help="Evaluation dataset URL",
+    )
+
+    parser.add_argument(
+        "--train-subset",
+        type=str,
+        help="Subset of the training split to use",
+    )
+    parser.add_argument("--train-split", type=str, help="The split to use for training")
+    parser.add_argument("--train-samples", type=int, help="Number of training samples")
+
+    parser.add_argument(
+        "--eval-subset",
+        type=str,
+        help="Subset of the evaluation split to use",
+    )
+
+    parser.add_argument(
+        "--eval-split",
+        type=str,
+        help="The split to use for evaluation",
+    )
+
+    parser.add_argument("--eval-samples", type=int, help="Number of evaluation samples")
+
+    parser.add_argument(
+        "--features",
+        type=str,
+        nargs="+",
+        help="List of features to use from the dataset (e.g. --features text title)",
+    )
+
+    # Add dataset cache parameters after other dataset controls
+    parser.add_argument(
+        "--use-dataset-cache",
+        action="store_true",
+        dest="use_dataset_cache",
+        default=True,
+        help="Use cached datasets if available",
+    )
+
+    parser.add_argument(
+        "--no-dataset-cache",
+        action="store_false",
+        dest="use_dataset_cache",
+        help="Don't use cached datasets",
+    )
+
+    parser.add_argument(
+        "--dataset-cache-dir",
+        type=str,
+        default="./.dataset_cache",
+        help="Directory to store cached datasets",
     )
 
     return parser.parse_args()
@@ -200,26 +245,31 @@ def main():
         training_args = HausaLMTrainingArgs()
 
     # Update training args with command line parameters
-    training_args.features = args.features
-    training_args.hub_model_id = args.target_model_id
-    training_args.hub_token = hf_token
-    training_args.fp16 = args.fp16
+    args_dict = vars(args)
+    for key, value in args_dict.items():
+        if hasattr(training_args, key) and value is not None:
+            setattr(training_args, key, value)
 
-    # Overriding training arguments with command line parameters
-    if args.num_train_epochs is not None:
-        training_args.num_train_epochs = args.num_train_epochs
-    if args.per_device_train_batch_size is not None:
-        training_args.per_device_train_batch_size = args.per_device_train_batch_size
-    if args.per_device_eval_batch_size is not None:
-        training_args.per_device_eval_batch_size = args.per_device_eval_batch_size
-    if args.optim is not None:
-        training_args.optim = args.optim
-    if args.gradient_accumulation_steps is not None:
-        training_args.gradient_accumulation_steps = args.gradient_accumulation_steps
+    # training_args.features = args.features
+    # training_args.hub_model_id = args.target_model_id
+    # training_args.hub_token = hf_token
+    # training_args.fp16 = args.fp16
 
-    # Set logging and saving steps
-    training_args.logging_steps = args.logging_steps
-    training_args.save_steps = args.save_steps
+    # # Overriding training arguments with command line parameters
+    # if args.num_train_epochs is not None:
+    #     training_args.num_train_epochs = args.num_train_epochs
+    # if args.per_device_train_batch_size is not None:
+    #     training_args.per_device_train_batch_size = args.per_device_train_batch_size
+    # if args.per_device_eval_batch_size is not None:
+    #     training_args.per_device_eval_batch_size = args.per_device_eval_batch_size
+    # if args.optim is not None:
+    #     training_args.optim = args.optim
+    # if args.gradient_accumulation_steps is not None:
+    #     training_args.gradient_accumulation_steps = args.gradient_accumulation_steps
+
+    # # Set logging and saving steps
+    # training_args.logging_steps = args.logging_steps
+    # training_args.save_steps = args.save_steps
 
     # Determine tokenizer ID (use model ID if not specified)
     tokenizer_id = args.tokenizer_id or args.source_model_id
@@ -238,22 +288,11 @@ def main():
         trust_remote_code=args.trust_remote_code,
     )
 
-    quantization_config = (
-        BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True,
-        )
-        if args.quantize
-        else None
-    )
 
     print(f"Loading model from {args.source_model_id}")
     model = AutoModelForCausalLM.from_config(
         config,
         trust_remote_code=args.trust_remote_code,
-        # quantization_config=quantization_config,
     )
     print("Initialized model with random weights")
 
