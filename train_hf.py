@@ -339,6 +339,10 @@ def main():
 
         model.print_trainable_parameters()
 
+    # Display model total parameters
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Total parameters in the model: {total_params / 1e6:.2f}M")
+
     print("Loading training dataset")
     train_dataset = get_dataset(
         hub_url=training_args.dataset_url,
