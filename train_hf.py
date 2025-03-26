@@ -269,6 +269,9 @@ def main():
         if hasattr(training_args, key) and value is not None:
             setattr(training_args, key, value)
 
+    training_args.logging_steps = args.logging_steps
+    training_args.save_steps = args.save_steps
+
     # training_args.features = args.features
     # training_args.hub_model_id = args.target_model_id
     # training_args.hub_token = hf_token
