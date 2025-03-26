@@ -60,9 +60,7 @@ def register_args():
         default=512,
         help="Max sequence length for tokenization",
     )
-    parser.add_argument(
-        "--features", nargs="+", default=["text"], help="Dataset features to use"
-    )
+    
     parser.add_argument(
         "--trust_remote_code",
         action="store_true",
