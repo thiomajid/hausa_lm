@@ -43,7 +43,7 @@ def model_summary(model: HausaLMForCausalLM):
     )
 
 
-dataset_filters_registry: list[dict[str, Callable[[Any], bool]]] = {
+dataset_filters_registry: dict[str, list[Callable[[Any], bool]]] = {
     "CohereForAI/aya_dataset": [
         lambda x: x["language"] == "Hausa",
     ],

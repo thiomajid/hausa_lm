@@ -1,9 +1,13 @@
 import argparse
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Literal, Optional
 
+from datasets import Dataset as HfDataset
 from datasets import load_dataset
+from tqdm import tqdm
 from transformers import AutoTokenizer
+
+from hausa_lm.utils import dataset_filters_registry
 
 
 def train_tokenizer(
@@ -11,6 +15,7 @@ def train_tokenizer(
     dataset_url: str,
     text_column: str,
     split: str,
+    samples: int | Literal["all"] = "all",
     subset: Optional[str] = None,
     vocab_size: Optional[int] = None,
     output_dir: str = "./tokenizer",
@@ -19,6 +24,7 @@ def train_tokenizer(
     model_id: Optional[str] = None,
     trust_remote_code: bool = False,
     token: Optional[str] = None,
+    filters: Optional[list[Callable[[Any], bool]]] = None,
 ):
     """Train a new tokenizer based on an existing one using a dataset."""
     print(f"Loading base tokenizer: {base_tokenizer_name}")
@@ -38,18 +44,37 @@ def train_tokenizer(
             subset,
             split=split,
             trust_remote_code=trust_remote_code,
+            streaming=True,
+            token=token,
         )
     else:
         dataset = load_dataset(
             dataset_url,
             split=split,
             trust_remote_code=trust_remote_code,
+            streaming=True,
+            token=token,
         )
+
+    buffer = []
+    for el in tqdm(dataset, desc="Loading dataset"):
+        if filters is not None:
+            for f in filters:
+                if not f(el):
+                    break
+            else:
+                continue
+
+        buffer.append(el)
+        if samples != "all" and len(buffer) >= samples:
+            break
+
+    train_data = HfDataset.from_list(buffer)
 
     def batch_iterator():
         """Returns batches of texts from the dataset."""
-        for i in range(0, len(dataset), batch_size):
-            yield dataset[i : i + batch_size][text_column]
+        for i in range(0, len(train_data), batch_size):
+            yield train_data[i : i + batch_size][text_column]
 
     # Train a new tokenizer from the base tokenizer
     print("Training tokenizer...")
@@ -90,6 +115,14 @@ if __name__ == "__main__":
         required=True,
         help="HuggingFace dataset name or path",
     )
+
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default="all",
+        help="Number of samples to use from the dataset",
+    )
+
     parser.add_argument(
         "--text_column",
         type=str,
@@ -133,17 +166,21 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    filters = dataset_filters_registry.get(args.dataset_url, None)
+
     train_tokenizer(
-        args.base_tokenizer,
-        args.dataset_url,
-        args.text_column,
-        args.split,
-        args.subset,
-        args.vocab_size,
-        args.output_dir,
-        args.batch_size,
-        args.push_to_hub,
-        args.model_id,
-        args.trust_remote_code,
-        args.token,
+        base_tokenizer_name=args.base_tokenizer,
+        dataset_url=args.dataset_url,
+        text_column=args.text_column,
+        split=args.split,
+        subset=args.subset,
+        samples=args.samples,
+        vocab_size=args.vocab_size,
+        batch_size=args.batch_size,
+        model_id=args.model_id,
+        output_dir=args.output_dir,
+        push_to_hub=args.push_to_hub,
+        trust_remote_code=args.trust_remote_code,
+        token=args.token,
+        filters=filters,
     )
