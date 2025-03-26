@@ -16,6 +16,7 @@ def get_dataset(
     max_seq_length: int,
     tokenizer: AutoTokenizer,
     split: str,
+    trust_remote_code: bool = False,
     n_samples: Union[int, Literal["all"]] = "all",
     token: Optional[str] = None,
     use_cache: bool = True,
@@ -60,11 +61,11 @@ def get_dataset(
 
         if subset is not None:
             data_stream = load_dataset(
-                hub_url, subset, split=split, streaming=True, token=token
+                hub_url, subset, split=split, streaming=True, token=token, trust_remote_code=trust_remote_code,
             )
         else:
             data_stream = load_dataset(
-                hub_url, split=split, streaming=True, token=token
+                hub_url, split=split, streaming=True, token=token, trust_remote_code=trust_remote_code,
             )
 
         data_points = []

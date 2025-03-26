@@ -222,6 +222,28 @@ def register_args():
         help="Directory to store cached datasets",
     )
 
+    # model architecture specific arguments
+    parser.add_argument(
+        "--hidden-size",
+        type=int,
+        default=768,
+        help="Hidden size of the model",
+    )
+
+    parser.add_argument(
+        "--num-hidden-layers",
+        type=int,
+        default=12,
+        help="Number of hidden layers in the model",
+    )
+
+    parser.add_argument(
+        "--num-attention-heads",
+        type=int,
+        default=12,
+        help="Number of attention heads in the model",
+    )
+
     return parser.parse_args()
 
 
@@ -288,6 +310,11 @@ def main():
         trust_remote_code=args.trust_remote_code,
     )
 
+    # Set model architecture parameters
+    for key, value in args_dict.items():
+        if hasattr(config, key) and value is not None:
+            setattr(config, key, value)
+
 
     print(f"Loading model from {args.source_model_id}")
     model = AutoModelForCausalLM.from_config(
@@ -323,11 +350,17 @@ def main():
         n_samples=training_args.train_samples,
         token=hf_token,
         trust_remote_code=args.trust_remote_code,
+        use_cache=args.use_dataset_cache,
+        cache_dir=args.dataset_cache_dir,
     )
 
     print("Loading evaluation dataset")
+
+    if args.eval_dataset_url is None:
+        args.eval_dataset_url = args.dataset_url
+
     eval_dataset = get_dataset(
-        hub_url=training_args.dataset_url,
+        hub_url=args.eval_dataset_url,
         subset=training_args.eval_subset,
         features=training_args.features,
         max_seq_length=args.max_seq_length,
@@ -336,6 +369,9 @@ def main():
         n_samples=training_args.eval_samples,
         token=hf_token,
         trust_remote_code=args.trust_remote_code,
+        use_cache=args.use_dataset_cache,
+        cache_dir=args.dataset_cache_dir,
+
     )
 
     training_args.hub_token = hf_token
