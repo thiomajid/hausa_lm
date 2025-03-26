@@ -1,13 +1,11 @@
 import argparse
 import os
 
-import torch
 from peft import LoraConfig, get_peft_model
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig,
     DataCollatorForLanguageModeling,
     HfArgumentParser,
     Trainer,
@@ -15,6 +13,7 @@ from transformers import (
 
 from hausa_lm.data import get_dataset
 from hausa_lm.trainer.arguments import HausaLMTrainingArgs
+from hausa_lm.utils import dataset_filters_registry
 
 #!/usr/bin/env python3
 
@@ -60,7 +59,7 @@ def register_args():
         default=512,
         help="Max sequence length for tokenization",
     )
-    
+
     parser.add_argument(
         "--trust_remote_code",
         action="store_true",
@@ -313,7 +312,6 @@ def main():
         if hasattr(config, key) and value is not None:
             setattr(config, key, value)
 
-
     print(f"Loading model from {args.source_model_id}")
     model = AutoModelForCausalLM.from_config(
         config,
@@ -341,6 +339,8 @@ def main():
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total parameters in the model: {total_params / 1e6:.2f}M")
 
+    filters = dataset_filters_registry.get(args.dataset_url, None)
+
     print("Loading training dataset")
     train_dataset = get_dataset(
         hub_url=training_args.dataset_url,
@@ -354,6 +354,7 @@ def main():
         trust_remote_code=args.trust_remote_code,
         use_cache=args.use_dataset_cache,
         cache_dir=args.dataset_cache_dir,
+        filters=filters,
     )
 
     print("Loading evaluation dataset")
@@ -373,7 +374,7 @@ def main():
         trust_remote_code=args.trust_remote_code,
         use_cache=args.use_dataset_cache,
         cache_dir=args.dataset_cache_dir,
-
+        filters=filters,
     )
 
     training_args.hub_token = hf_token

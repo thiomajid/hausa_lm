@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any, Callable
 
 from hausa_lm.modules.model import HausaLMForCausalLM
 
@@ -40,3 +41,11 @@ def model_summary(model: HausaLMForCausalLM):
         xlstm=xlstm_size / one_million,
         xlstm_ratio=ratio(xlstm_size),
     )
+
+
+dataset_filters_registry: list[dict[str, Callable[[Any], bool]]] = {
+    "CohereForAI/aya_dataset": [
+        lambda x: x["language"] == "Hausa",
+    ],
+}
+"""Set of filtering rules to apply on data points while streaming the dataset."""

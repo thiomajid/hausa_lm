@@ -1,6 +1,6 @@
 import hashlib
 import os
-from typing import Literal, Optional, Union
+from typing import Any, Callable, Literal, Optional, Union
 
 from datasets import Dataset as HfDataset
 from datasets import IterableDataset, load_dataset, load_from_disk
@@ -21,6 +21,7 @@ def get_dataset(
     token: Optional[str] = None,
     use_cache: bool = True,
     cache_dir: str = "./.dataset_cache",
+    filters: Optional[list[Callable[[Any], bool]]] = None,
 ):
     # Create a unique cache key based on dataset parameters
     cache_key_parts = [
@@ -61,16 +62,31 @@ def get_dataset(
 
         if subset is not None:
             data_stream = load_dataset(
-                hub_url, subset, split=split, streaming=True, token=token, trust_remote_code=trust_remote_code,
+                hub_url,
+                subset,
+                split=split,
+                streaming=True,
+                token=token,
+                trust_remote_code=trust_remote_code,
             )
         else:
             data_stream = load_dataset(
-                hub_url, split=split, streaming=True, token=token, trust_remote_code=trust_remote_code,
+                hub_url,
+                split=split,
+                streaming=True,
+                token=token,
+                trust_remote_code=trust_remote_code,
             )
 
         data_points = []
 
         for data_point in tqdm(data_stream, desc=f"Loading the {split} data"):
+            if filters is not None:
+                for fn in filters:
+                    if not fn(data_point):
+                        break
+                else:
+                    continue
             data_points.append(data_point)
             if n_samples != "all" and len(data_points) >= n_samples:
                 break
