@@ -91,6 +91,14 @@ def register_args():
         default=None,
         help="Override optimizer (e.g., adamw_torch, adamw_hf)",
     )
+
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=None,
+        help="Override learning rate",
+    )
+
     parser.add_argument(
         "--gradient_accumulation_steps",
         type=int,
@@ -239,6 +247,20 @@ def register_args():
         type=int,
         default=12,
         help="Number of attention heads in the model",
+    )
+
+    parser.add_argument(
+        "--warmup-ratio",
+        type=float,
+        default=0.1,
+        help="Warmup ratio for learning rate scheduling",
+    )
+
+    parser.add_argument(
+        "--weight-decay",
+        type=float,
+        default=0.01,
+        help="Weight decay for optimizer",
     )
 
     return parser.parse_args()
