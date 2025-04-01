@@ -293,27 +293,13 @@ def main():
 
     training_args.logging_steps = args.logging_steps
     training_args.save_steps = args.save_steps
+    training_args.train_subset = args.train_subset
+    training_args.eval_subset = args.eval_subset
 
     # training_args.features = args.features
     # training_args.hub_model_id = args.target_model_id
     # training_args.hub_token = hf_token
     # training_args.fp16 = args.fp16
-
-    # # Overriding training arguments with command line parameters
-    # if args.num_train_epochs is not None:
-    #     training_args.num_train_epochs = args.num_train_epochs
-    # if args.per_device_train_batch_size is not None:
-    #     training_args.per_device_train_batch_size = args.per_device_train_batch_size
-    # if args.per_device_eval_batch_size is not None:
-    #     training_args.per_device_eval_batch_size = args.per_device_eval_batch_size
-    # if args.optim is not None:
-    #     training_args.optim = args.optim
-    # if args.gradient_accumulation_steps is not None:
-    #     training_args.gradient_accumulation_steps = args.gradient_accumulation_steps
-
-    # # Set logging and saving steps
-    # training_args.logging_steps = args.logging_steps
-    # training_args.save_steps = args.save_steps
 
     # Determine tokenizer ID (use model ID if not specified)
     tokenizer_id = args.tokenizer_id or args.source_model_id
