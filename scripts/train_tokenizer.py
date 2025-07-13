@@ -1,14 +1,12 @@
 import hydra
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal, Optional, Any
 
 from datasets import Dataset as HfDataset
 from datasets import load_dataset
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 from transformers import AutoTokenizer
-
-from src.data.rules import BinaryFilterRule
 
 
 def train_tokenizer(
@@ -25,7 +23,7 @@ def train_tokenizer(
     model_id: Optional[str] = None,
     trust_remote_code: bool = False,
     token: Optional[str] = None,
-    filter_rules: Optional[list[BinaryFilterRule]] = None,
+    filter_rules: Optional[list[Any]] = None,
 ):
     """Train a new tokenizer based on an existing one using a dataset."""
     print(f"Loading base tokenizer: {base_tokenizer_name}")

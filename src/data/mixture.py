@@ -77,7 +77,8 @@ def push_datamix_to_hub(config: DataMixConfig):
         json.dump(config_dict, f)
 
     upload_file(
-        path_or_fileobj="mix_config.json",
         repo_id=config.upload_hub_id,
         token=config.hub_token,
+        path_or_fileobj="mix_config.json",
+        path_in_repo="./mix_config.json",
     )
