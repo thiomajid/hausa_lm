@@ -1,8 +1,10 @@
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal, Optional
 
 import hydra
+from huggingface_hub import upload_file
 from omegaconf import DictConfig, OmegaConf
 from transformers import AutoTokenizer
 
@@ -88,6 +90,21 @@ def main(cfg: DictConfig):
         print("Config loaded, starting tokenizer training...")
 
         train_tokenizer(config)
+
+        with open("train_tokenizer_config.json", "w") as f:
+            config_dict = asdict(config)
+            config_dict.pop("hub_token")
+
+            json.dump(config_dict, f)
+
+        upload_file(
+            repo_id=config.model_id,
+            token=config.hub_token,
+            path_or_fileobj="train_tokenizer_config.json",
+            path_in_repo="./train_tokenizer_config.json",
+            repo_type="model",
+        )
+
     except Exception as e:
         print(f"Error occurred: {e}")
         import traceback
