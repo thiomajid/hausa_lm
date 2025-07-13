@@ -1,0 +1,29 @@
+defaults:
+  - _self_
+
+# Base tokenizer configuration
+base_tokenizer: "xlm-roberta-base"
+vocab_size: 49152
+
+# Dataset configuration  
+dataset_url: "thiomajid/hausa_datamix"
+text_column: "text"
+split: "train"
+subset: null
+samples: "all"  # or integer number
+
+# Filter rules (optional)
+filter_rules: null
+  # - lhs: "language"
+  #   op: "eq" 
+  #   rhs: "Hausa"
+
+# Training configuration
+batch_size: 1000
+output_dir: "./tokenizer"
+
+# Hub configuration
+push_to_hub: false
+model_id: null
+hub_token: ""
+trust_remote_code: false

@@ -39,17 +39,6 @@
     - lhs: "language"
       op: "eq"
       rhs: "Hausa"
-  
-
-- hub_id: "vpetukhov/bible_tts_hausa"
-  split: "train"
-  subset: null
-  samples: 3000
-  text_column: "sentence"
-  filter_rules:
-    - lhs: "locale"
-      op: "eq"
-      rhs: "ha"
 
 - hub_id: "HausaNLP/AfriSenti-Twitter"
   split: "train"

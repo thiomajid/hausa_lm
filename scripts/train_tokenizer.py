@@ -1,13 +1,14 @@
-import argparse
+import hydra
 from pathlib import Path
 from typing import Any, Callable, Literal, Optional
 
 from datasets import Dataset as HfDataset
 from datasets import load_dataset
+from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from hausa_lm.utils import dataset_filters_registry
+from src.data.rules import BinaryFilterRule
 
 
 def train_tokenizer(
