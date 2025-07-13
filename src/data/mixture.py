@@ -35,7 +35,7 @@ def create_datamix(config: DataMixConfig):
 
     for idx, mix_config in enumerate(config.data_mix):
         print("=" * 30)
-        print(f"Downloading data {idx + 1 / num_datasets} from {mix_config.hub_id}")
+        print(f"Downloading data {idx + 1} / {num_datasets} from {mix_config.hub_id}")
         print("=" * 30)
 
         data: Dataset = load_and_cache_raw_dataset(
