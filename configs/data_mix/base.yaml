@@ -7,6 +7,10 @@
     - lhs: "language"
       op: "eq"
       rhs: "Hausa"
+    
+    - lhs: "inputs"
+      op: "ne"
+      rhs: null
 
 
 - hub_id: "CohereLabs/aya_dataset"
@@ -18,6 +22,10 @@
     - lhs: "language"
       op: "eq"
       rhs: "Hausa"
+
+    - lhs: "targets"
+      op: "ne"
+      rhs: null
 
 
 - hub_id: "CohereLabs/aya_dataset"
@@ -30,6 +38,10 @@
       op: "eq"
       rhs: "Hausa"
 
+    - lhs: "inputs"
+      op: "ne"
+      rhs: null
+
 - hub_id: "CohereLabs/aya_dataset"
   split: "train"
   subset: "default"
@@ -39,4 +51,7 @@
     - lhs: "language"
       op: "eq"
       rhs: "Hausa"
-      
+
+    - lhs: "targets"
+      op: "ne"
+      rhs: null
