@@ -1,29 +1,20 @@
 defaults:
   - _self_
 
-# Base tokenizer configuration
-base_tokenizer: "xlm-roberta-base"
+base_tokenizer: "HuggingFaceTB/SmolLM2-135M"
 vocab_size: 49152
 
 # Dataset configuration  
-dataset_url: "thiomajid/hausa_datamix"
+dataset_url: "thiomajid/base_hausa_datamix"
 text_column: "text"
 split: "train"
 subset: null
-samples: "all"  # or integer number
-
-# Filter rules (optional)
-filter_rules: null
-  # - lhs: "language"
-  #   op: "eq" 
-  #   rhs: "Hausa"
+samples: "all" 
 
 # Training configuration
 batch_size: 1000
-output_dir: "./tokenizer"
+output_dir: "./trained_tokenizer"
 
-# Hub configuration
-push_to_hub: false
-model_id: null
+model_id: "thiomajid/hausa_lm"
 hub_token: ""
-trust_remote_code: false
+trust_remote_code: true
