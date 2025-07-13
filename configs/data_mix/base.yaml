@@ -1,0 +1,68 @@
+- hub_id: "CohereLabs/aya_dataset"
+  split: "train"
+  subset: "default"
+  samples: "all"
+  text_column: "inputs"
+  filter_rules: 
+    - lhs: "language"
+      op: "eq"
+      rhs: "Hausa"
+
+
+- hub_id: "CohereLabs/aya_dataset"
+  split: "train"
+  subset: "default"
+  samples: "all"
+  text_column: "targets"
+  filter_rules: 
+    - lhs: "language"
+      op: "eq"
+      rhs: "Hausa"
+
+
+- hub_id: "CohereLabs/aya_dataset"
+  split: "test"
+  subset: "default"
+  samples: "all"
+  text_column: "inputs"
+  filter_rules: 
+    - lhs: "language"
+      op: "eq"
+      rhs: "Hausa"
+
+- hub_id: "CohereLabs/aya_dataset"
+  split: "train"
+  subset: "default"
+  samples: "all"
+  text_column: "targets"
+  filter_rules: 
+    - lhs: "language"
+      op: "eq"
+      rhs: "Hausa"
+  
+
+- hub_id: "vpetukhov/bible_tts_hausa"
+  split: "train"
+  subset: null
+  samples: 3000
+  text_column: "sentence"
+  filter_rules:
+    - lhs: "locale"
+      op: "eq"
+      rhs: "ha"
+
+- hub_id: "HausaNLP/AfriSenti-Twitter"
+  split: "train"
+  subset: "hau"
+  samples: 5000
+  text_column: "tweet"
+  filter_rules: null
+  
+
+- hub_id: "HausaNLP/AfriSenti-Twitter"
+  split: "dev"
+  subset: "hau"
+  samples: "all"
+  text_column: "tweet"
+  filter_rules: null
+  

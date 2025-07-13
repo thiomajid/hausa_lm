@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+  - data_mix: base
+
+
+upload_hub_id: "thiomajid/hausa_datamix"
+trust_remote_code: true
+hub_token: ""
+final_text_column: "text"
