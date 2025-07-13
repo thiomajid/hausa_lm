@@ -57,8 +57,7 @@ def create_datamix(config: DataMixConfig):
         unused_columns = [col for col in columns if col != mix_config.text_column]
         data = data.remove_columns(column_names=unused_columns)
 
-        data = data.rename_column(mix_config.text_column, config.final_text_column)
-        data = data.map(lambda x: {"source": mix_config.hub_id}, batched=True)
+        data = data.add_column("source", [mix_config.hub_id] * data.num_rows)
 
         datarefs.append(data)
 
