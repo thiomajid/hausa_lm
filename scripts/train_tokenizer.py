@@ -1,6 +1,6 @@
 import hydra
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional
+from typing import Literal, Optional
 
 from datasets import Dataset as HfDataset
 from datasets import load_dataset
@@ -25,7 +25,7 @@ def train_tokenizer(
     model_id: Optional[str] = None,
     trust_remote_code: bool = False,
     token: Optional[str] = None,
-    filters: Optional[list[Callable[[Any], bool]]] = None,
+    filter_rules: Optional[list[BinaryFilterRule]] = None,
 ):
     """Train a new tokenizer based on an existing one using a dataset."""
     print(f"Loading base tokenizer: {base_tokenizer_name}")
@@ -59,14 +59,15 @@ def train_tokenizer(
 
     buffer = []
     for el in tqdm(dataset, desc="Loading dataset"):
-        if filters is not None:
-            for f in filters:
-                if not f(el):
+        if filter_rules is not None:
+            for rule in filter_rules:
+                if not rule.as_predicate()(el):
                     break
             else:
-                continue
-
-        buffer.append(el)
+                buffer.append(el)
+        else:
+            buffer.append(el)
+            
         if samples != "all" and len(buffer) >= samples:
             break
 
@@ -102,86 +103,46 @@ def train_tokenizer(
     return new_tokenizer
 
 
+@hydra.main(config_path="../configs", config_name="tokenizer_config", version_base="1.2")
+def main(cfg: DictConfig):
+    try:
+        print("Starting tokenizer training...")
+        print("Parsing config dict")
+        config_dict = OmegaConf.to_container(cfg, resolve=True)
+        print("Config dict created successfully")
+
+        # Convert filter_rules to BinaryFilterRule objects if they exist
+        filter_rules = None
+        if config_dict.get("filter_rules"):
+            filter_rules = [
+                BinaryFilterRule(**rule_dict) 
+                for rule_dict in config_dict["filter_rules"]
+            ]
+
+        print("Config loaded, starting tokenizer training...")
+
+        train_tokenizer(
+            base_tokenizer_name=config_dict["base_tokenizer"],
+            dataset_url=config_dict["dataset_url"],
+            text_column=config_dict["text_column"],
+            split=config_dict["split"],
+            subset=config_dict.get("subset"),
+            samples=config_dict["samples"],
+            vocab_size=config_dict.get("vocab_size"),
+            batch_size=config_dict["batch_size"],
+            model_id=config_dict.get("model_id"),
+            output_dir=config_dict["output_dir"],
+            push_to_hub=config_dict["push_to_hub"],
+            trust_remote_code=config_dict["trust_remote_code"],
+            token=config_dict.get("hub_token"),
+            filter_rules=filter_rules,
+        )
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train a new tokenizer on a dataset.")
-    parser.add_argument(
-        "--base_tokenizer",
-        type=str,
-        required=True,
-        help="Name or path of base tokenizer",
-    )
-    parser.add_argument(
-        "--dataset_url",
-        type=str,
-        required=True,
-        help="HuggingFace dataset name or path",
-    )
-
-    parser.add_argument(
-        "--samples",
-        type=int,
-        default="all",
-        help="Number of samples to use from the dataset",
-    )
-
-    parser.add_argument(
-        "--text_column",
-        type=str,
-        required=True,
-        help="Name of the text column in the dataset",
-    )
-    parser.add_argument(
-        "--split", type=str, default="train", help="Dataset split to use"
-    )
-    parser.add_argument(
-        "--subset", type=str, default=None, help="Dataset subset to use (optional)"
-    )
-    parser.add_argument(
-        "--vocab_size", type=int, default=49152, help="Size of the vocabulary"
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default="./tokenizer",
-        help="Directory to save the tokenizer",
-    )
-    parser.add_argument(
-        "--batch_size", type=int, default=1000, help="Batch size for processing texts"
-    )
-    parser.add_argument(
-        "--push_to_hub",
-        action="store_true",
-        help="Whether to push the tokenizer to the Hub",
-    )
-    parser.add_argument(
-        "--model_id", type=str, default=None, help="Model ID for pushing to the Hub"
-    )
-    parser.add_argument(
-        "--trust_remote_code",
-        action="store_true",
-        help="Whether to trust remote code when loading the tokenizer",
-    )
-    parser.add_argument(
-        "--token", type=str, default=None, help="Hugging Face token for pushing to Hub"
-    )
-
-    args = parser.parse_args()
-
-    filters = dataset_filters_registry.get(args.dataset_url, None)
-
-    train_tokenizer(
-        base_tokenizer_name=args.base_tokenizer,
-        dataset_url=args.dataset_url,
-        text_column=args.text_column,
-        split=args.split,
-        subset=args.subset,
-        samples=args.samples,
-        vocab_size=args.vocab_size,
-        batch_size=args.batch_size,
-        model_id=args.model_id,
-        output_dir=args.output_dir,
-        push_to_hub=args.push_to_hub,
-        trust_remote_code=args.trust_remote_code,
-        token=args.token,
-        filters=filters,
-    )
+    main()

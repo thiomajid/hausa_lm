@@ -39,19 +39,4 @@
     - lhs: "language"
       op: "eq"
       rhs: "Hausa"
-
-- hub_id: "HausaNLP/AfriSenti-Twitter"
-  split: "train"
-  subset: "hau"
-  samples: 5000
-  text_column: "tweet"
-  filter_rules: null
-  
-
-- hub_id: "HausaNLP/AfriSenti-Twitter"
-  split: "dev"
-  subset: "hau"
-  samples: "all"
-  text_column: "tweet"
-  filter_rules: null
-  
+      
