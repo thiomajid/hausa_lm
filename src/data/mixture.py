@@ -88,4 +88,5 @@ def push_datamix_to_hub(config: DataMixConfig):
         token=config.hub_token,
         path_or_fileobj="mix_config.json",
         path_in_repo="./mix_config.json",
+        repo_type="dataset",
     )
