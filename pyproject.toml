@@ -1,13 +1,15 @@
 [project]
 name = "hausa-lm"
 version = "0.1.0"
-description = "Add your description here"
+authors = [{ name = "Abdoul Majid O. Thiombiano" }]
+description = "Language models for Hausa"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "chex>=0.1.89",
     "datasets>=3.6.0",
     "dm-pix>=0.4.4",
+    "einops>=0.8.1",
     "flax>=0.10.6",
     "grain>=0.2.10",
     "jax>=0.6.2",
@@ -17,5 +19,9 @@ dependencies = [
     "orbax>=0.1.9",
     "pillow>=11.2.1",
     "tensorflow>=2.19.0",
+    "torch>=2.7.1",
     "transformers>=4.52.4",
 ]
+
+[dependency-groups]
+dev = []
