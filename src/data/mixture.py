@@ -3,7 +3,7 @@ import typing as tp
 from dataclasses import asdict, dataclass
 
 from datasets import Dataset, concatenate_datasets
-from huggingface_hub import upload_file
+from huggingface_hub import create_repo, repo_exists, upload_file
 
 from .hf import load_and_cache_raw_dataset
 from .rules import BinaryFilterRule
@@ -68,6 +68,13 @@ def push_datamix_to_hub(config: DataMixConfig):
     datarefs = create_datamix(config)
     final_data = concatenate_datasets(datarefs)
     final_data = final_data.train_test_split(train_size=0.8, seed=42)
+
+    if not repo_exists(repo_id=config.upload_hub_id, token=config.hub_token):
+        create_repo(
+            repo_id=config.upload_hub_id,
+            token=config.hub_token,
+            repo_type="dataset",
+        )
 
     final_data.push_to_hub(repo_id=config.upload_hub_id, token=config.hub_token)
     with open("mix_config.json", "w") as f:

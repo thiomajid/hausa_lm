@@ -1,7 +1,7 @@
-import hydra
 from pathlib import Path
-from typing import Literal, Optional, Any
+from typing import Any, Literal, Optional
 
+import hydra
 from datasets import Dataset as HfDataset
 from datasets import load_dataset
 from omegaconf import DictConfig, OmegaConf
@@ -65,7 +65,7 @@ def train_tokenizer(
                 buffer.append(el)
         else:
             buffer.append(el)
-            
+
         if samples != "all" and len(buffer) >= samples:
             break
 
@@ -101,9 +101,18 @@ def train_tokenizer(
     return new_tokenizer
 
 
-@hydra.main(config_path="../configs", config_name="tokenizer_config", version_base="1.2")
+@hydra.main(
+    config_path="../configs", config_name="tokenizer_config", version_base="1.2"
+)
 def main(cfg: DictConfig):
     try:
+        # Import here to avoid module path issues
+        import sys
+
+        project_root = Path(__file__).parent.parent
+        sys.path.insert(0, str(project_root))
+        from src.data.rules import BinaryFilterRule
+
         print("Starting tokenizer training...")
         print("Parsing config dict")
         config_dict = OmegaConf.to_container(cfg, resolve=True)
@@ -113,7 +122,7 @@ def main(cfg: DictConfig):
         filter_rules = None
         if config_dict.get("filter_rules"):
             filter_rules = [
-                BinaryFilterRule(**rule_dict) 
+                BinaryFilterRule(**rule_dict)
                 for rule_dict in config_dict["filter_rules"]
             ]
 
@@ -138,6 +147,7 @@ def main(cfg: DictConfig):
     except Exception as e:
         print(f"Error occurred: {e}")
         import traceback
+
         traceback.print_exc()
         raise
 
