@@ -11,7 +11,7 @@ from flax import nnx
 from jax import lax
 from jax.sharding import Mesh, NamedSharding
 from jax.sharding import PartitionSpec as P
-from transformers import BertConfig, SigLip
+from transformers import BertConfig
 
 from src.utils.initialization import (
     embedding_partitioned_init,
