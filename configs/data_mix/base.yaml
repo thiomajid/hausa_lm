@@ -100,7 +100,7 @@
 
 - hub_id: "Owen1u/Reddit-Amazon-5M-hausa"
   split: "train"
-  samples: "all"
+  samples: 5_000
   text_column: "text"
   filter_rules: null
 
