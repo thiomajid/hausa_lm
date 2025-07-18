@@ -160,12 +160,15 @@ def main(cfg: DictConfig):
     config_dict["vocab_size"] = tokenizer.vocab_size
     config_dict["pad_token_id"] = tokenizer.pad_token_id
     pprint(config_dict)
+
     config = parse_xlstm_config_dict(config_dict)
     config.pad_token_id = tokenizer.pad_token_id
 
-    print(config)
+    # I must find where this duplicate "xlstm" key is coming from
+    if "xlstm" in config_dict:
+        config_dict.pop("xlstm")
 
-    raise SystemExit()
+    print(config)
 
     log_node_devices_stats(logger)
 
