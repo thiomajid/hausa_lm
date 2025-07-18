@@ -11,3 +11,6 @@ wheels/
 
 # hydra outputs
 outputs
+
+# tensorboard from colab or kaggle
+logs

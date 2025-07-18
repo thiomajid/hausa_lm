@@ -1,3 +1,10 @@
+- hub_id: "Arnold/hausa_common_voice"
+  split: "train"
+  subset: "hau"
+  samples: "all"
+  text_column: "tweet"
+  filter_rules: null
+
 - hub_id: "CohereLabs/aya_dataset"
   split: "train"
   subset: "default"

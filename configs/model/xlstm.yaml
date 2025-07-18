@@ -12,7 +12,7 @@ mlstm_block:
 
 slstm_block:
   slstm:
-    backend: "cuda"
+    backend: "vanilla"
     num_heads: 4
     conv1d_kernel_size: 4
     bias_init: "powerlaw_blockdependent"
