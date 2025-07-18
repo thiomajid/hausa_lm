@@ -156,7 +156,7 @@ def main(cfg: DictConfig):
         tokenizer.padding_side = "left"
         logger.warning("Changed the tokenizer's padding_side from right to left")
 
-    config_dict = OmegaConf.to_container(cfg["model"]["xlstm"], resolve=True)
+    config_dict = OmegaConf.to_container(cfg["model"], resolve=True)
     config_dict["vocab_size"] = tokenizer.vocab_size
     config_dict["pad_token_id"] = tokenizer.pad_token_id
     pprint(config_dict)
