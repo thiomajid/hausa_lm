@@ -71,7 +71,7 @@ class BaseTrainingArgs(TrainingArguments):
     trust_remote_code: bool = field(default=True)
 
     mesh_shape: tuple[int, ...] = field(default_factory=lambda: (2, 4))
-    axis_names: tuple[str, ...] = field(default_factory=lambda: ("dp", "tp"))
+    axes_names: tuple[str, ...] = field(default_factory=lambda: ("dp", "tp"))
 
     def __post_init__(self):
         super().__post_init__()
@@ -80,4 +80,4 @@ class BaseTrainingArgs(TrainingArguments):
             self.eval_dataset_url = self.train_dataset_url
 
         self.mesh_shape = tuple(self.mesh_shape)
-        self.axis_names = tuple(self.axis_names)
+        self.axes_names = tuple(self.axes_names)

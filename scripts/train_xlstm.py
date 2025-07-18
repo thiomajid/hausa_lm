@@ -171,7 +171,7 @@ def main(cfg: DictConfig):
     dtype = str2dtype(dtype_str)
 
     mesh_shape = tuple(args.mesh_shape) if hasattr(args, "mesh_shape") else (1, 1)
-    axis_names = tuple(args.axis_names) if hasattr(args, "axis_names") else ("dp", "tp")
+    axis_names = tuple(args.axes_names) if hasattr(args, "axis_names") else ("dp", "tp")
     mesh = create_mesh(mesh_shape=mesh_shape, axis_names=axis_names)
 
     model: tp.Optional[xLSTMLMModel] = None

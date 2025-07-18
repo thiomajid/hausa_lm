@@ -44,5 +44,5 @@ remove_unused_columns: false
 trust_remote_code: true
 
 
-axis_names: ["dp", "tp"]
+axes_names: ["dp", "tp"]
 mesh_shape: [2, 4]

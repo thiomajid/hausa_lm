@@ -5,6 +5,7 @@ from datasets import Dataset as HfDataset
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 
 from src.data.hf import get_dataset
+from src.trainer.base_arguments import BaseTrainingArgs
 
 
 class HubDataSource(grain.RandomAccessDataSource):
@@ -53,9 +54,9 @@ class DataCollatatorTransform(grain.MapTransform):
         return self.collator([element])
 
 
-def create_dataloaders[T](
+def create_dataloaders(
     logger: logging.Logger,
-    args: T,
+    args: BaseTrainingArgs,
     tokenizer: AutoTokenizer,
     max_seq_length: int,
     train_data_ops: list[grain.MapTransform],
