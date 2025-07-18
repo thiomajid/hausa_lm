@@ -63,6 +63,9 @@ class ParamsStats:
     def __str__(self) -> str:
         return self.__repr__()
 
+    def __add__(self, other: "ParamsStats"):
+        return self.millions + other.millions
+
 
 @dataclass
 class LanguageModelParamStats:
