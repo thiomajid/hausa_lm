@@ -34,7 +34,7 @@ logging_steps: 2
 save_steps: 2
 hub_private_repo: true
 save_total_limit: 2
-load_best_model_at_end: true
+load_best_model_at_end: false
 eval_strategy: "steps"
 
 push_to_hub: true
