@@ -163,6 +163,10 @@ def main(cfg: DictConfig):
     config = parse_xlstm_config_dict(config_dict)
     config.pad_token_id = tokenizer.pad_token_id
 
+    print(config)
+
+    raise SystemExit()
+
     log_node_devices_stats(logger)
 
     # Model instance
