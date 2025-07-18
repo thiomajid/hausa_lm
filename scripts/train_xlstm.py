@@ -159,14 +159,16 @@ def main(cfg: DictConfig):
     config_dict = OmegaConf.to_container(cfg["model"], resolve=True)
     config_dict["vocab_size"] = tokenizer.vocab_size
     config_dict["pad_token_id"] = tokenizer.pad_token_id
+
+    # I must find where this duplicate "xlstm" key is coming from
+    if "xlstm" in config_dict:
+        logger.warning("Found duplicate `xlstm` key in model config")
+        config_dict.pop("xlstm")
+
     pprint(config_dict)
 
     config = parse_xlstm_config_dict(config_dict)
     config.pad_token_id = tokenizer.pad_token_id
-
-    # I must find where this duplicate "xlstm" key is coming from
-    if "xlstm" in config_dict:
-        config_dict.pop("xlstm")
 
     print(config)
 
