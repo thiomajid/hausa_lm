@@ -1,0 +1,48 @@
+
+# Custom training arguments
+tokenizer: "thiomajid/hausa_lm"
+train_dataset_url: "thiomajid/base_hausa_datamix"
+train_split: "train"
+train_samples: 8
+
+eval_dataset_url: "thiomajid/base_hausa_datamix"
+eval_split: "test"
+eval_samples: 8
+features: ["text"]
+use_dataset_cache: true
+dataset_cache_dir: "./.hf_data_cache"
+
+# HF TrainerArguments arguments
+num_train_epochs: 3
+gradient_accumulation_steps: 2
+per_device_train_batch_size: 2
+per_device_eval_batch_size: 2
+
+# optim args
+learning_rate: 0.0002
+weight_decay: 0.001
+warmup_ratio: 0.1
+torch_compile: false
+fp16: false
+use_cpu: false
+gradient_checkpointing: false
+
+output_dir: "final_output"
+logging_dir: "artifacts"
+report_to: "tensorboard"
+logging_steps: 2
+save_steps: 2
+hub_private_repo: true
+save_total_limit: 2
+load_best_model_at_end: true
+eval_strategy: "steps"
+
+push_to_hub: true
+resume_from_checkpoint: "artifacts"
+hub_model_id: "thiomajid/hausa_mlstm"
+remove_unused_columns: false
+trust_remote_code: true
+
+
+axis_names: ["dp", "tp"]
+mesh_shape: [2, 4]

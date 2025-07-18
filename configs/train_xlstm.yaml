@@ -1,0 +1,6 @@
+defaults:
+  - _self_
+  - trainer: base
+  - model: xlstm
+
+dtype: "bfloat16"
