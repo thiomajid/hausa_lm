@@ -58,7 +58,9 @@ def create_datamix(config: DataMixConfig):
         data = data.remove_columns(unused_columns)
 
         data = data.add_column("source", [mix_config.hub_id] * data.num_rows)
+        data = data.add_column("split", [mix_config.split] * data.num_rows)
         data = data.rename_column(mix_config.text_column, config.final_text_column)
+        data = data.shuffle()
 
         datarefs.append(data)
 

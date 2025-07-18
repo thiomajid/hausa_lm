@@ -1,8 +1,43 @@
-- hub_id: "Arnold/hausa_common_voice"
+- hub_id: "davidpig/lnl-hausa"
   split: "train"
-  subset: "hau"
   samples: "all"
-  text_column: "tweet"
+  text_column: "text"
+  filter_rules: null
+
+- hub_id: "davidpig/lnl-hausa"
+  split: "validation"
+  samples: "all"
+  text_column: "text"
+  filter_rules: null
+
+- hub_id: "davidpig/lnl-hausa"
+  split: "test"
+  samples: "all"
+  text_column: "text"
+  filter_rules: null
+
+- hub_id: "saillab/alpaca-hausa-cleaned"
+  split: "train"
+  samples: "all"
+  text_column: "instruction"
+  filter_rules: null
+
+- hub_id: "saillab/alpaca-hausa-cleaned"
+  split: "test"
+  samples: "all"
+  text_column: "output"
+  filter_rules: null
+
+- hub_id: "jojo-ai-mst/Roleplay-Hausa"
+  split: "train"
+  samples: "all"
+  text_column: "umarni"
+  filter_rules: null
+
+- hub_id: "jojo-ai-mst/Roleplay-Hausa"
+  split: "train"
+  samples: "all"
+  text_column: "amsa"
   filter_rules: null
 
 - hub_id: "CohereLabs/aya_dataset"
@@ -62,3 +97,16 @@
     - lhs: "targets"
       op: "ne"
       rhs: null
+
+- hub_id: "Owen1u/Reddit-Amazon-5M-hausa"
+  split: "train"
+  samples: "all"
+  text_column: "text"
+  filter_rules: null
+
+
+- hub_id: "jonathansuru/hausa_bert"
+  split: "train"
+  samples: "all"
+  text_column: "hau"
+  filter_rules: null
