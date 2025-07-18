@@ -63,7 +63,10 @@ class ParamsStats:
     def __str__(self) -> str:
         return self.__repr__()
 
-    def __add__(self, other: "ParamsStats"):
+    def __add__(self, other: tp.Union["ParamsStats", float]):
+        if isinstance(other, float):
+            return self.millions + other
+
         return self.millions + other.millions
 
 
