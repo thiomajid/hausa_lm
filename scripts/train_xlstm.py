@@ -35,7 +35,7 @@ from src.utils.devices import create_mesh, log_node_devices_stats
 from src.utils.inference import GenerationCarry, generate_sequence_scan
 from src.utils.modules import (
     checkpoint_post_eval,
-    count_parameters,
+    language_model_params_stats,
     load_sharded_checkpoint_state,
 )
 from src.utils.parser import parse_xlstm_config_dict
@@ -192,7 +192,14 @@ def main(cfg: DictConfig):
             dtype=dtype,
         )
 
-    logger.info(f"Model parameters: {count_parameters(model)}")
+    logger.info("Model parameters")
+    pprint(
+        language_model_params_stats(
+            embed=model.token_embedding,
+            lm_head=model.lm_head,
+            sequence_mixer=model.xlstm_block_stack,
+        )
+    )
 
     log_node_devices_stats(logger)
 
@@ -542,8 +549,9 @@ def main(cfg: DictConfig):
                 greedy=GREEDY,
             )
 
-            text_sequence = tokenizer.decode(sequences, skip_special_tokens=True)
-            tb_logger.writer.text("train/generation", text_sequence, step=global_step)
+            sequences = tokenizer.batch_decode(sequences)
+            for seq in sequences:
+                tb_logger.writer.text("train/generation", seq, step=global_step)
 
         else:
             logger.warning(

@@ -1,7 +1,7 @@
 import logging
+import typing as tp
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import jax
 import jax.tree_util as jtu
@@ -44,7 +44,7 @@ class ModuleList(nnx.Module):
     def __getitem__(self, idx: int):
         return self.modules[idx]
 
-    def __call__(self, index: Any, *args):
+    def __call__(self, index: tp.Any, *args):
         return jax.lax.switch(
             index,
             self.modules,
@@ -64,6 +64,18 @@ class ParamsStats:
         return self.__repr__()
 
 
+@dataclass
+class LanguageModelParamStats:
+    millions: float
+    billions: float
+    embedding: float
+    embedding_ratio: float
+    lm_head: float
+    lm_head_ratio: float
+    sequence_mixer: float
+    sequence_mixer_ratio: float
+
+
 def count_parameters(module: nnx.Module):
     params = nnx.state(module, nnx.Param)
     leaves, _ = jtu.tree_flatten(params)
@@ -73,6 +85,38 @@ def count_parameters(module: nnx.Module):
     return ParamsStats(
         millions=round(total / 1e6, 2),
         billions=round(total / 1e9, 2),
+    )
+
+
+def language_model_params_stats(
+    embed: nnx.Module,
+    lm_head: nnx.Module,
+    sequence_mixer: nnx.Module | tp.Iterable[nnx.Module],
+):
+    embed_count = count_parameters(embed)
+    head_count = count_parameters(lm_head)
+    mixer_count = count_parameters(sequence_mixer)
+
+    total = embed_count + mixer_count + head_count
+
+    def ratio(x: int):
+        return round((x / total) * 100, 2)
+
+    million = 1e6
+    billion = 1e9
+
+    return LanguageModelParamStats(
+        millions=round(total / million, 2),
+        billions=round(total / billion, 2),
+        # embedding stats
+        embedding=round(embed_count / million, 2),
+        embedding_ratio=ratio(embed_count),
+        # lm_head stats
+        lm_head=round(head_count / million, 2),
+        lm_head_ratio=ratio(head_count),
+        # mixer stats
+        sequence_mixer=round(mixer_count / million, 2),
+        sequence_mixer_ratio=ratio(mixer_count),
     )
 
 
