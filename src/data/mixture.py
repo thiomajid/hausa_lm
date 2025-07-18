@@ -14,8 +14,8 @@ class MixDatasetConfig:
     hub_id: str
     split: str
     text_column: str
-    subset: tp.Optional[str]
-    samples: tp.Union[int, tp.Literal["all"]]
+    samples: tp.Union[int, tp.Literal["all"]] = "all"
+    subset: tp.Optional[str] = None
     filter_rules: tp.Optional[list[BinaryFilterRule]] = None
 
 
