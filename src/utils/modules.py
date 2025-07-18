@@ -76,11 +76,17 @@ class LanguageModelParamStats:
     sequence_mixer_ratio: float
 
 
-def count_parameters(module: nnx.Module):
+def count_total_params(module: nnx.Module):
     params = nnx.state(module, nnx.Param)
     leaves, _ = jtu.tree_flatten(params)
     sizes = jtu.tree_map(lambda leaf: leaf.size, leaves)
     total = sum(sizes)
+
+    return total
+
+
+def count_parameters(module: nnx.Module):
+    total = count_total_params(module)
 
     return ParamsStats(
         millions=round(total / 1e6, 2),
@@ -93,9 +99,9 @@ def language_model_params_stats(
     lm_head: nnx.Module,
     sequence_mixer: nnx.Module | tp.Iterable[nnx.Module],
 ):
-    embed_count = count_parameters(embed).millions
-    head_count = count_parameters(lm_head).millions
-    mixer_count = count_parameters(sequence_mixer).millions
+    embed_count = count_total_params(embed)
+    head_count = count_total_params(lm_head)
+    mixer_count = count_total_params(sequence_mixer)
 
     total = embed_count + mixer_count + head_count
 
