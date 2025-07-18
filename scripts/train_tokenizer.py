@@ -31,7 +31,9 @@ def train_tokenizer(config: TrainTokenizerConfig):
     """Train a new tokenizer based on an existing one using a dataset."""
     print(f"Loading base tokenizer: {config.base_tokenizer}")
     base_tokenizer = AutoTokenizer.from_pretrained(
-        config.base_tokenizer, trust_remote_code=config.trust_remote_code
+        config.base_tokenizer,
+        token=config.hub_token,
+        trust_remote_code=config.trust_remote_code,
     )
 
     # Use the base tokenizer's vocab size if none is provided
@@ -89,7 +91,7 @@ def main(cfg: DictConfig):
         config = TrainTokenizerConfig(**config_dict)
         print("Config loaded, starting tokenizer training...")
 
-        train_tokenizer(config)
+        _ = train_tokenizer(config)
 
         with open("train_tokenizer_config.json", "w") as f:
             config_dict = asdict(config)
