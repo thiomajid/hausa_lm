@@ -63,12 +63,6 @@ class ParamsStats:
     def __str__(self) -> str:
         return self.__repr__()
 
-    def __add__(self, other: tp.Union["ParamsStats", float]):
-        if isinstance(other, float):
-            return self.millions + other
-
-        return self.millions + other.millions
-
 
 @dataclass
 class LanguageModelParamStats:
@@ -99,9 +93,9 @@ def language_model_params_stats(
     lm_head: nnx.Module,
     sequence_mixer: nnx.Module | tp.Iterable[nnx.Module],
 ):
-    embed_count = count_parameters(embed)
-    head_count = count_parameters(lm_head)
-    mixer_count = count_parameters(sequence_mixer)
+    embed_count = count_parameters(embed).millions
+    head_count = count_parameters(lm_head).millions
+    mixer_count = count_parameters(sequence_mixer).millions
 
     total = embed_count + mixer_count + head_count
 
