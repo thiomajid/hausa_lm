@@ -128,3 +128,6 @@ class xLSTMLMModel(nnx.Module):
             logits = self.lm_head(h_t)
 
         return logits
+
+    def generate(self, input_ids: jax.Array):
+        return self(input_ids)
