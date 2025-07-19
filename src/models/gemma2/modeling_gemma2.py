@@ -7,9 +7,12 @@ import jax.numpy as jnp
 from flax import nnx
 from jax import lax
 from jax.sharding import Mesh
-from transformers import Gemma2Config
+from transformers.models.gemma2 import Gemma2Config
 
 from xlstm_jax.mask import apply_padding_mask_with_gradient_stop, create_padding_mask
+
+from ...utils.devices import create_mesh
+from ...utils.inference import GenerationCarry
 
 
 def rotate_half(x: jax.Array):
@@ -221,9 +224,10 @@ class Gemma2Attention(nnx.Module):
         #     attn_weights = attn_weights + attention_mask
 
         def _apply_mask(weights: jax.Array):
-            mask = attention_mask[:, None, None, :]
-            mask = jnp.broadcast_to(mask, shape=(B, self.num_heads, S, S))
-            return weights * mask
+            mask = attention_mask[:, :, :, : key_states.shape[-2]]
+            # mask = attention_mask[:, None, None, :]
+            # mask = jnp.broadcast_to(mask, shape=(B, self.num_heads, S, S))
+            return weights + mask
 
         attn_weights = lax.cond(
             attention_mask is not None,
@@ -467,6 +471,195 @@ class Gemma2ForCausalLM(nnx.Module):
         )
 
         logits = self.lm_head(hidden_states)
-        logits = soft_cap(logits, self.final_logit_softcapping)
+
+        # Apply soft capping if configured
+        logits: jax.Array = lax.cond(
+            self.final_logit_softcapping is not None,
+            lambda x: soft_cap(x, self.final_logit_softcapping),
+            lambda x: x,
+            operand=logits,
+        )
 
         return logits
+
+    def generate(self, input_ids: jax.Array, attention_mask: jax.Array):
+        return self(input_ids, attention_mask)
+
+
+# Define the generation step function globally or inside the jitted function
+# Making it standalone allows for cleaner separation
+def _generation_step_body(
+    model: nnx.Module,  # Pass the model object
+    carry: GenerationCarry,
+    _,  # Loop variable from scan, unused
+    vocab_size: int,
+    temperature: float,
+    greedy: bool,  # This will be a static argument passed to lax.cond predicate
+):
+    """Body function for one step of lax.scan."""
+    current_full_x, current_index, current_key = carry
+    step_key, next_key = jax.random.split(current_key)  # Split key for this step
+
+    # --- Input Preparation ---
+    input_sequence = current_full_x
+    # Create attention mask for the current sequence length
+    batch_size, seq_len = input_sequence.shape
+    attention_mask = nnx.make_causal_mask(input_sequence, dtype=input_sequence.dtype)
+
+    out = model.generate(
+        input_sequence, attention_mask
+    )  # Shape: [batch, seq_len, vocab_size]
+    batch_size = current_full_x.shape[0]  # Get batch size dynamically
+
+    # --- Logit Selection ---
+    logits_slice = jax.lax.dynamic_slice(
+        out,
+        start_indices=(0, current_index - 1, 0),  # Last token logits
+        slice_sizes=(batch_size, 1, vocab_size),  # whole batch, 1 token, vocab size
+    )
+
+    # (B, 1, V) -> (B, V)
+    last_token_logits = jnp.squeeze(logits_slice, axis=1)
+
+    # --- Sampling ---
+    # Define functions for true/false branches of lax.cond
+    def _greedy_sample(logits, _, __):
+        return jnp.argmax(logits, axis=-1)
+
+    def _temperature_sample(logits, temp, key):
+        scaled_logits = logits / temp
+        probabilities = jax.nn.softmax(scaled_logits, axis=-1)
+        return jax.random.categorical(key, probabilities, axis=-1)
+
+    next_token = jax.lax.cond(
+        greedy,
+        _greedy_sample,
+        lambda logits, temp, key: _temperature_sample(logits, temp, key),
+        last_token_logits,
+        temperature,
+        step_key,
+    )
+
+    next_token = next_token.astype(jnp.int32)
+
+    # --- State update ---
+    # Update the full sequence array with the new token
+    updated_full_x = jax.lax.dynamic_update_slice(
+        current_full_x, next_token[:, None], (0, current_index)
+    )
+
+    # Return new carry and the collected token
+    return (
+        updated_full_x,
+        current_index + 1,
+        next_key,
+    ), next_token
+
+
+@partial(
+    nnx.jit,
+    static_argnames=("max_new_tokens", "vocab_size", "temperature", "greedy"),
+)
+def generate_sequence_scan(
+    model: nnx.Module,
+    initial_carry_val: GenerationCarry,
+    max_new_tokens: int,
+    vocab_size: int,
+    temperature: float = 1.0,
+    greedy: bool = False,
+):
+    """
+    Generates a sequence using jax.lax.scan with support for greedy or temperature sampling.
+    This function is JIT-compiled.
+
+    Args:
+        model: The NNX model object.
+        initial_carry_val: Tuple containing (initial_sequence, initial_index, initial_prng_key).
+        max_new_tokens: The number of new tokens to generate (static for JIT).
+        vocab_size: The size of the vocabulary (static for JIT).
+        temperature: Temperature for sampling (static for JIT).
+        greedy: If True, use greedy decoding (static for JIT).
+
+    Returns:
+        The final generated sequence array.
+
+    """
+
+    generation_step_partial = partial(
+        _generation_step_body,
+        model,
+        vocab_size=vocab_size,
+        temperature=temperature,
+        greedy=greedy,
+    )
+
+    final_carry, _ = jax.lax.scan(
+        generation_step_partial,  # Use the partial function
+        initial_carry_val,
+        None,  # xs, not needed here as we iterate based on length
+        length=max_new_tokens,
+    )
+    final_x = final_carry[0]  # The full sequence array
+    return final_x
+
+
+if __name__ == "__main__":
+    """
+    Example of how to use the JAX Qwen3 implementation.
+    This demonstrates model creation and inference.
+    """
+
+    # Create a simple test configuration
+    config = Gemma2Config(vocab_size=1000, hidden_size=32, num_hidden_layers=4)
+
+    # Initialize random number generators
+
+    mesh = create_mesh((1, 1), ("dp", "tp"))
+    rngs = nnx.Rngs(12)
+
+    # Create the JAX model
+    print("Creating model...")
+    model = None
+    with mesh:
+        model = Gemma2ForCausalLM(config, mesh=mesh, rngs=rngs, dtype=jnp.float32)
+        state = nnx.state(model)
+        pspecs = nnx.get_partition_spec(state)
+        sharded_state = lax.with_sharding_constraint(state, pspecs)
+        nnx.update(model, sharded_state)
+
+    # Test forward pass
+    batch_size, seq_len = 2, 128
+    input_ids = jnp.ones((batch_size, seq_len), dtype=jnp.int32)
+
+    print(f"Running forward pass with input shape: {input_ids.shape}")
+
+    # Run inference
+    mask = nnx.make_causal_mask(input_ids)
+    outputs = model(input_ids=input_ids, attention_mask=mask)
+
+    print(f"Output logits shape: {outputs.shape}")
+
+    print("Using jitted generation fn")
+
+    MAX_NEW_TOKENS = 100
+    batch_size = input_ids.shape[0]
+    initial_len = input_ids.shape[1]
+    total_length = initial_len + MAX_NEW_TOKENS
+    full_x_init = jnp.zeros((batch_size, total_length), dtype=jnp.int32)
+    full_x_init = full_x_init.at[:, :initial_len].set(input_ids)
+    key = jax.random.key(123)
+    initial_carry: GenerationCarry = (
+        full_x_init,
+        initial_len,
+        key,
+    )
+
+    output = generate_sequence_scan(
+        model=model,
+        initial_carry_val=initial_carry,
+        max_new_tokens=MAX_NEW_TOKENS,
+        vocab_size=config.vocab_size,
+        temperature=0.85,
+    )
+
+    print(output.shape)
