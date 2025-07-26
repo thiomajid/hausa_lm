@@ -1,0 +1,19 @@
+defaults:
+  - _self_
+  - trainer: base
+  - model: gemma2
+
+# Model configuration
+model_hub_id: "google/gemma-2-2B" # Dynamically use the model path from the selected config
+dtype: "bfloat16"
+
+trust_remote_code: true
+
+# Checkpoint loading/saving
+resume_from_checkpoint: false
+checkpoint_hub_url: null
+checkpoint_revision: "main"
+checkpoint_save_dir: "./checkpoints"
+
+# Hub uploading
+upload_message: "HuggingFace language model training completed"
