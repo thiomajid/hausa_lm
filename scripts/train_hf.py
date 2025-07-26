@@ -100,7 +100,7 @@ def eval_step(
 
 @functools.partial(
     nnx.jit,
-    static_argnames=("model_name", "seed", "mesh", "dtype"),
+    static_argnames=("model_name", "seed", "mesh", "dtype", "config_fn"),
 )
 def _create_sharded_model(
     model_name: str,
