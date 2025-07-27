@@ -617,6 +617,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "tensorboard" },
     { name = "torch" },
 ]
 
@@ -640,7 +641,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "torch", specifier = ">=2.7.1" }]
+dev = [
+    { name = "tensorboard", specifier = ">=2.19.0" },
+    { name = "torch", specifier = ">=2.7.1" },
+]
 
 [[package]]
 name = "hf-xet"

@@ -4,3 +4,4 @@ defaults:
   - model: xlstm
 
 dtype: "bfloat16"
+checkpoint_save_dir: "./checkpoints"

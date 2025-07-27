@@ -339,7 +339,7 @@ def main(cfg: DictConfig):
     tb_logger = TensorBoardLogger(log_dir=args.logging_dir, name="train")
 
     # Checkpoint manager
-    ckpt_dir = Path(args.logging_dir).absolute()
+    ckpt_dir = Path(cfg["checkpoint_save_dir"]).absolute()
     ckpt_dir.mkdir(parents=True, exist_ok=True)
 
     BEST_METRIC_KEY: tp.Final[str] = "eval_loss"
@@ -628,7 +628,7 @@ def main(cfg: DictConfig):
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
     # Copy TensorBoard logs to artifacts directory
-    tb_logs_source = Path(args.logging_dir) / "training"
+    tb_logs_source = Path(args.logging_dir)
     tb_logs_target = artifacts_dir / "tensorboard_logs"
     if tb_logs_source.exists():
         shutil.copytree(tb_logs_source, tb_logs_target, dirs_exist_ok=True)
