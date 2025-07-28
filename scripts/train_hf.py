@@ -344,6 +344,8 @@ def main(cfg: DictConfig):
     BEST_METRIC_KEY: tp.Final[str] = "eval_loss"
     CHECKPOINT_OPTIONS = ocp.CheckpointManagerOptions(
         max_to_keep=args.save_total_limit,
+        best_fn=lambda metrics: metrics[BEST_METRIC_KEY],
+        best_mode="min",
         create=True,
     )
 
