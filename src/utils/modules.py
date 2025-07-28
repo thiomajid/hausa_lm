@@ -225,3 +225,6 @@ def checkpoint_post_eval(
         )
 
     logger.info(f"Checkpoint saved at end of epoch {epoch + 1}")
+
+    # Return the current metric value for manual best tracking
+    return latest_eval_metrics_for_ckpt[best_metric_key]

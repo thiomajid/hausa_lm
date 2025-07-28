@@ -344,8 +344,6 @@ def main(cfg: DictConfig):
     BEST_METRIC_KEY: tp.Final[str] = "eval_loss"
     CHECKPOINT_OPTIONS = ocp.CheckpointManagerOptions(
         max_to_keep=args.save_total_limit,
-        best_fn=lambda metrics: metrics[BEST_METRIC_KEY],
-        best_mode="min",
         create=True,
     )
 
@@ -353,6 +351,10 @@ def main(cfg: DictConfig):
     global_step = 0
     global_optimizer_step = 0
     latest_eval_metrics_for_ckpt = {BEST_METRIC_KEY: float("inf")}
+
+    # Manual best metric tracking (for new Orbax API compatibility)
+    best_metric_value = float("inf")
+    best_step = None
 
     logger.info("Starting training loop...")
     logger.info(f"Num Epochs = {args.num_train_epochs}")
@@ -425,6 +427,9 @@ def main(cfg: DictConfig):
                     batch=_batch,
                 )
 
+                # Calculate perplexity for display
+                current_perplexity = jnp.exp(loss)
+
                 # Check if it's time for optimizer step
                 is_update_step = (step + 1) % args.gradient_accumulation_steps == 0
                 if is_update_step:
@@ -451,17 +456,14 @@ def main(cfg: DictConfig):
                     "opt_step": f"{global_optimizer_step}/{max_optimizer_steps}",
                     "lr": f"{current_lr:.2e}",
                     "loss": f"{loss.item():.6f}",
+                    "ppl": f"{current_perplexity.item():.2f}",
                     "grad_norm": f"{grad_norm.item():.4f}",
                 }
 
                 # Add best metrics
-                if (
-                    BEST_METRIC_KEY in latest_eval_metrics_for_ckpt
-                    and latest_eval_metrics_for_ckpt[BEST_METRIC_KEY] != float("inf")
-                ):
-                    postfix_data["best_loss"] = (
-                        f"{latest_eval_metrics_for_ckpt[BEST_METRIC_KEY]:.6f}"
-                    )
+                if best_step is not None:
+                    postfix_data["best_loss"] = f"{best_metric_value:.6f}"
+                    postfix_data["best_step"] = str(best_step)
 
                 current_desc = f"Epoch {epoch + 1}/{args.num_train_epochs} (Step {global_step}/{max_steps}, Opt {global_optimizer_step}/{max_optimizer_steps})"
                 pbar.set_description(current_desc)
@@ -505,7 +507,7 @@ def main(cfg: DictConfig):
         logger.info(f"Processed {eval_batch_count} evaluation batches")
 
         if eval_batch_count > 0 and eval_data_available:
-            checkpoint_post_eval(
+            current_eval_metric = checkpoint_post_eval(
                 logger=logger,
                 model=model,
                 metrics=eval_metrics,
@@ -517,7 +519,18 @@ def main(cfg: DictConfig):
                 checkpoint_options=CHECKPOINT_OPTIONS,
             )
 
-            # Generate some text (if the model supports it)
+            # Update manual best metric tracking
+            if current_eval_metric < best_metric_value:
+                best_metric_value = current_eval_metric
+                best_step = global_step
+                logger.info(
+                    f"New best {BEST_METRIC_KEY}: {best_metric_value:.6f} at step {best_step}"
+                )
+
+            # Update latest metrics for potential final checkpoint
+            latest_eval_metrics_for_ckpt = {BEST_METRIC_KEY: current_eval_metric}
+
+            # Generate some text
             try:
                 choosen_prompt = random.choice(GENERATION_SAMPLES)
                 input_ids = tokenizer(
@@ -618,6 +631,14 @@ def main(cfg: DictConfig):
     )
     logger.info(f"Average epoch duration: {avg_epoch_duration:.2f} seconds")
 
+    # Log best metric summary
+    if best_step is not None:
+        logger.info(
+            f"Best {BEST_METRIC_KEY}: {best_metric_value:.6f} achieved at step {best_step}"
+        )
+    else:
+        logger.warning("No best checkpoint was identified during training.")
+
     # Close TensorBoard logger
     tb_logger.close()
 
@@ -677,25 +698,30 @@ def main(cfg: DictConfig):
     if global_step > 0:
         final_model_state = nnx.state(model, nnx.Param)
         logger.info(
-            f"Saving final model state at step {global_step} to be considered by CheckpointManager with metrics {latest_eval_metrics_for_ckpt}."
+            f"Saving final model state at step {global_step} with metrics {latest_eval_metrics_for_ckpt}."
         )
 
-        manager.save(
-            global_step,
-            final_model_state,
-            metrics=latest_eval_metrics_for_ckpt,
-        )
-        manager.wait_until_finished()
+        # Save final checkpoint using new Orbax API
+        with ocp.CheckpointManager(
+            CHECKPOINT_DIR,
+            options=CHECKPOINT_OPTIONS,
+            checkpointers=ocp.PyTreeCheckpointer(),
+        ) as manager:
+            manager.save(
+                global_step,
+                args=ocp.args.PyTreeSave(final_model_state),
+                metrics=latest_eval_metrics_for_ckpt,
+            )
 
-    # Copy best checkpoint to artifacts directory
-    best_step_to_deploy = manager.best_step()
+    # Copy best checkpoint to artifacts directory using manual tracking
+    best_step_to_deploy = best_step
     target_ckpt_deployment_path = artifacts_dir / "model_checkpoint"
 
     if best_step_to_deploy is not None:
         logger.info(
-            f"Best checkpoint according to CheckpointManager is at step {best_step_to_deploy} (based on {BEST_METRIC_KEY})."
+            f"Best checkpoint according to manual tracking is at step {best_step_to_deploy} (based on {BEST_METRIC_KEY}: {best_metric_value:.6f})."
         )
-        source_ckpt_dir = manager.directory / str(best_step_to_deploy)
+        source_ckpt_dir = CHECKPOINT_DIR / str(best_step_to_deploy)
 
         if source_ckpt_dir.exists():
             logger.info(
@@ -711,7 +737,7 @@ def main(cfg: DictConfig):
         else:
             logger.error(f"Best checkpoint directory {source_ckpt_dir} not found.")
     else:
-        logger.warning("CheckpointManager did not identify a best checkpoint.")
+        logger.warning("No best checkpoint identified through manual tracking.")
         if global_step > 0:
             final_model_state = nnx.state(model, nnx.Param)
             logger.info(
@@ -720,6 +746,8 @@ def main(cfg: DictConfig):
             if target_ckpt_deployment_path.exists():
                 shutil.rmtree(target_ckpt_deployment_path)
             target_ckpt_deployment_path.mkdir(parents=True, exist_ok=True)
+
+            # Use PyTreeCheckpointer for fallback save
             ocp.PyTreeCheckpointHandler().save(
                 target_ckpt_deployment_path,
                 final_model_state,
