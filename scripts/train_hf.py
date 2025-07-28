@@ -338,21 +338,15 @@ def main(cfg: DictConfig):
     tb_logger = TensorBoardLogger(log_dir=args.logging_dir, name="train")
 
     # Checkpoint manager
-    ckpt_dir = Path(cfg["checkpoint_save_dir"]).absolute()
-    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    CHECKPOINT_DIR = Path(cfg["checkpoint_save_dir"]).absolute()
+    CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
     BEST_METRIC_KEY: tp.Final[str] = "eval_loss"
-    options = ocp.CheckpointManagerOptions(
+    CHECKPOINT_OPTIONS = ocp.CheckpointManagerOptions(
         max_to_keep=args.save_total_limit,
         best_fn=lambda metrics: metrics[BEST_METRIC_KEY],
         best_mode="min",
         create=True,
-    )
-
-    manager = ocp.CheckpointManager(
-        ckpt_dir,
-        checkpointers=ocp.PyTreeCheckpointer(),
-        options=options,
     )
 
     # Training loop setup
@@ -383,7 +377,11 @@ def main(cfg: DictConfig):
         spec=PartitionSpec("dp", None),
     )
 
-    GENERATION_SAMPLES = ["Na tafi gida", "Darasi na rana", "Duk kun yi rashin lafiya"]
+    GENERATION_SAMPLES = cfg.get(
+        "generation_samples",
+        ["Na tafi gida", "Darasi na rana", "Duk kun yi rashin lafiya"],
+    )
+
     MAX_NEW_TOKENS = 100
     GREEDY = False
     TEMPERATURE = 0.85
@@ -512,10 +510,11 @@ def main(cfg: DictConfig):
                 model=model,
                 metrics=eval_metrics,
                 tb_logger=tb_logger,
-                best_metric_key=BEST_METRIC_KEY,
-                checkpoint_manager=manager,
                 global_step=global_step,
                 epoch=epoch,
+                best_metric_key=BEST_METRIC_KEY,
+                checkpoint_dir=CHECKPOINT_DIR,
+                checkpoint_options=CHECKPOINT_OPTIONS,
             )
 
             # Generate some text (if the model supports it)

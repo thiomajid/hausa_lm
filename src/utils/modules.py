@@ -172,9 +172,13 @@ def load_sharded_checkpoint_state(
     if not checkpoint_path.exists():
         raise FileNotFoundError(f"Checkpoint path {checkpoint_path} does not exist.")
 
-    checkpointer = ocp.PyTreeCheckpointer()
-    restored_state = checkpointer.restore(checkpoint_path, abstract_state)
-    # nnx.replace_by_pure_dict(abstract_state, restored_state)
+    restored_state = None
+    with ocp.CheckpointManager(
+        checkpoint_path,
+        checkpointers=ocp.PyTreeCheckpointer(),
+    ) as manager:
+        restored_state = manager.restore(checkpoint_path, abstract_state)
+
     merged_model = nnx.merge(graphdef, restored_state)
     print("Merged state with the model.")
     return merged_model
@@ -186,7 +190,8 @@ def checkpoint_post_eval(
     metrics: nnx.MultiMetric,
     tb_logger: TensorBoardLogger,
     best_metric_key: str,
-    checkpoint_manager: ocp.CheckpointManager,
+    checkpoint_options: ocp.CheckpointManagerOptions,
+    checkpoint_dir: Path,
     global_step: int,
     epoch: int,
 ):
@@ -208,10 +213,15 @@ def checkpoint_post_eval(
     )
 
     state = nnx.state(model, nnx.Param)
-    checkpoint_manager.save(
-        global_step,
-        args=ocp.args.PyTreeSave(state),
-        metrics=latest_eval_metrics_for_ckpt,
-    )
-    checkpoint_manager.wait_until_finished()
+    with ocp.CheckpointManager(
+        checkpoint_dir,
+        options=checkpoint_options,
+        checkpointers=ocp.PyTreeCheckpointer(),
+    ) as manager:
+        manager.save(
+            global_step,
+            args=ocp.args.PyTreeSave(state),
+            metrics=latest_eval_metrics_for_ckpt,
+        )
+
     logger.info(f"Checkpoint saved at end of epoch {epoch + 1}")
