@@ -216,7 +216,7 @@ def checkpoint_post_eval(
     with ocp.CheckpointManager(
         checkpoint_dir,
         options=checkpoint_options,
-        checkpointers=ocp.PyTreeCheckpointer(),
+        # checkpointers=ocp.PyTreeCheckpointer(),
     ) as manager:
         manager.save(
             global_step,
