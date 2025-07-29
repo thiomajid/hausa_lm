@@ -846,8 +846,6 @@ def train_vae(cfg: DictConfig):
 @hydra.main(version_base="1.2", config_path="../configs", config_name="train_vae")
 def main(cfg: DictConfig) -> None:
     """Main entry point."""
-    logger.info("Starting VAE training with config:")
-    logger.info(OmegaConf.to_yaml(cfg))
 
     train_vae(cfg)
 
