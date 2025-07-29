@@ -305,22 +305,37 @@ def train_vae(cfg: DictConfig):
         grain.Batch(batch_size=args.per_device_train_batch_size, drop_remainder=True),
     ]
 
-    train_loader, _ = create_dataloaders(
+    eval_transforms = [
+        LoadFromBytesAndResize(
+            image_key=IMAGE_COLUMN,
+            width=config.image_size,
+            height=config.image_size,
+        ),
+        NormalizeImage(
+            mean=NORM_MEAN,
+            std=NORM_STD,
+            image_key=IMAGE_COLUMN,
+        ),
+        grain.Batch(batch_size=args.per_device_eval_batch_size, drop_remainder=True),
+    ]
+
+    train_loader, eval_loader = create_dataloaders(
         logger=logger,
         args=args,
         target_columns=target_columns,
         train_transforms=train_transforms,
-        eval_transforms=None,  # No evaluation needed for VAE training
+        eval_transforms=eval_transforms,
     )
 
     # Setup the training loop
     num_train_samples = len(train_loader._data_source)
+    num_eval_samples = len(eval_loader._data_source)
 
     logger.info(f"Dataset size - Train: {num_train_samples}")
     steps_dict = compute_training_steps(
         args,
         train_samples=num_train_samples,
-        eval_samples=0,  # No evaluation for VAE training
+        eval_samples=num_eval_samples,
         logger=logger,
     )
 
