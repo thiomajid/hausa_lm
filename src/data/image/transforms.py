@@ -115,33 +115,46 @@ def unnormalize_image(
     mean: tuple[float, ...],
     std: tuple[float, ...],
 ) -> np.ndarray:
-    """Unnormalize an image that was normalized with PyTorch-style normalization.
+    """Unnormalize an image or batch of images that was normalized with PyTorch-style normalization.
 
     Formula: pixel_unnormalized = (pixel_normalized * std) + mean
 
     Args:
-        img: Normalized image array
+        img: Normalized image array. Supports:
+            - Single images: (H, W), (H, W, 1), or (H, W, C)
+            - Batch of images: (B, H, W), (B, H, W, 1), or (B, H, W, C)
         mean: Mean values used for normalization
         std: Std values used for normalization
 
     Returns:
-        Unnormalized image in [0, 1] range
+        Unnormalized image(s) in [0, 1] range
     """
     _mean = np.array(mean, dtype=np.float32)
     _std = np.array(std, dtype=np.float32)
 
     # Apply inverse normalization: pixel_unnormalized = (pixel_normalized * std) + mean
-    if img.ndim == 3 and img.shape[-1] == len(mean):
-        # Multi-channel image (RGB)
+    if img.ndim == 4 and img.shape[-1] == len(mean):
+        # Batch of multi-channel images (B, H, W, C)
+        unnormalized = (img * _std.reshape(1, 1, 1, -1)) + _mean.reshape(1, 1, 1, -1)
+    elif img.ndim == 4 and img.shape[-1] == 1:
+        # Batch of grayscale images with channel dimension (B, H, W, 1)
+        unnormalized = (img * _std[0]) + _mean[0]
+    elif img.ndim == 3 and img.shape[-1] == len(mean):
+        # Single multi-channel image (H, W, C)
         unnormalized = (img * _std.reshape(1, 1, -1)) + _mean.reshape(1, 1, -1)
     elif img.ndim == 3 and img.shape[-1] == 1:
-        # Grayscale image with channel dimension
+        # Single grayscale image with channel dimension (H, W, 1)
+        unnormalized = (img * _std[0]) + _mean[0]
+    elif img.ndim == 3 and len(mean) == 1:
+        # Batch of grayscale images without channel dimension (B, H, W)
         unnormalized = (img * _std[0]) + _mean[0]
     elif img.ndim == 2:
-        # Grayscale image without channel dimension
+        # Single grayscale image without channel dimension (H, W)
         unnormalized = (img * _std[0]) + _mean[0]
     else:
-        raise ValueError(f"Unsupported image shape: {img.shape}")
+        raise ValueError(
+            f"Unsupported image shape: {img.shape}. Expected shapes: (B,H,W,C), (B,H,W,1), (B,H,W), (H,W,C), (H,W,1), or (H,W)"
+        )
 
     # Clip to [0, 1] range
     return np.clip(unnormalized, 0.0, 1.0)
