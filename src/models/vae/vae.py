@@ -392,16 +392,16 @@ def vae_loss(
     """VAE loss function with KL divergence and reconstruction loss.
 
     Args:
-        reconstruction: Reconstructed input
-        x: Original input
+        reconstruction: Reconstructed input (in range [-1, 1] from tanh)
+        x: Original input (in range [-1, 1])
         mean: Latent mean
         logvar: Latent log variance
         beta: Weight for KL divergence term (beta-VAE)
 
     Returns:
-        Tuple of (total_loss, loss_dict)
+        Tuple of (total_loss, reconstruction_loss, kl_loss)
     """
-    # Reconstruction loss (binary cross-entropy for images)
+    # Reconstruction loss - Mean Squared Error works well with [-1, 1] range
     reconstruction_loss = optax.squared_error(reconstruction, x).mean()
 
     # KL divergence loss
@@ -412,10 +412,4 @@ def vae_loss(
     # Total loss
     total_loss = reconstruction_loss + beta * kl_loss
 
-    loss_dict = {
-        "total_loss": total_loss,
-        "reconstruction_loss": reconstruction_loss,
-        "kl_loss": kl_loss,
-    }
-
-    return total_loss, loss_dict
+    return total_loss, reconstruction_loss, kl_loss

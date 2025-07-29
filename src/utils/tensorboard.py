@@ -90,6 +90,59 @@ class TensorBoardLogger:
         """
         self.log_scalar("learning_rate", lr, step)
 
+    def log_image(
+        self,
+        tag: str,
+        image: tp.Union[jax.Array, np.ndarray],
+        step: int,
+        max_outputs: int = 3,
+    ):
+        """Log a single image or batch of images.
+
+        Args:
+            tag: Name for the image
+            image: Image array with shape (H, W, C) or (B, H, W, C)
+            step: Global step
+            max_outputs: Maximum number of images to log if batch
+        """
+        if isinstance(image, jax.Array):
+            image = np.array(image)
+
+        # Ensure image is in the range [0, 1]
+        if image.max() <= 1.0 and image.min() >= 0.0:
+            pass  # Already in [0, 1]
+        elif image.max() <= 255 and image.min() >= 0:
+            image = image / 255.0  # Convert from [0, 255] to [0, 1]
+        else:
+            # Normalize to [0, 1]
+            image = (image - image.min()) / (image.max() - image.min())
+
+        self.writer.image(tag, image, step, max_outputs=max_outputs)
+
+    def log_images(
+        self,
+        tag: str,
+        images: tp.Union[jax.Array, np.ndarray],
+        step: int,
+        max_outputs: int = 8,
+    ):
+        """Log multiple images as a batch.
+
+        Args:
+            tag: Name for the images
+            images: Images array with shape (B, H, W, C)
+            step: Global step
+            max_outputs: Maximum number of images to log
+        """
+        if isinstance(images, jax.Array):
+            images = np.array(images)
+
+        # Ensure we don't exceed max_outputs
+        if images.shape[0] > max_outputs:
+            images = images[:max_outputs]
+
+        self.log_image(tag, images, step, max_outputs=max_outputs)
+
     def log_gradients(self, grads: tp.Dict[str, tp.Any], step: int):
         """Log gradient statistics.
 

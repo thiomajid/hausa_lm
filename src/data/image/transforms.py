@@ -58,28 +58,86 @@ class LoadFromBytesAndResize(grain.MapTransform):
 
 
 class NormalizeImage(grain.MapTransform):
-    """Transform for normalizing image data."""
+    """Transform for normalizing image data using PyTorch-style normalization with configurable mean and std.
 
-    def __init__(self, image_key: str = "image"):
+    Formula: (pixel - mean) / std
+    This results in pixel values in [-1, 1] range when using standard ImageNet normalization.
+    """
+
+    def __init__(
+        self,
+        mean: tuple[float, ...],
+        std: tuple[float, ...],
+        image_key: str = "image",
+    ):
         super().__init__()
         self.image_key = image_key
+        self.mean = np.array(mean, dtype=np.float32)
+        self.std = np.array(std, dtype=np.float32)
 
     def map(self, element):
-        """Normalize a single image."""
+        """Normalize a single image using PyTorch-style normalization."""
         if self.image_key not in element:
             return element
 
         img = element[self.image_key]
 
-        # Keep as numpy array - do NOT convert to JAX array
         if not isinstance(img, np.ndarray):
             img = np.array(img)
 
-        # Normalize to [0, 1] using numpy operations only
-        if img.max() > 1.0:
-            img = img.astype(np.float32) / 255.0
+        img = img.astype(np.float32)
+
+        # Apply PyTorch-style normalization: (pixel - mean) / std
+        if img.ndim == 3 and img.shape[-1] == len(self.mean):
+            img = (img - self.mean.reshape(1, 1, -1)) / self.std.reshape(1, 1, -1)
+        elif img.ndim == 3 and img.shape[-1] == 1:
+            # Grayscale image with channel dimension
+            # Use the first channel's mean and std for grayscale
+            img = (img - self.mean[0]) / self.std[0]
+        elif img.ndim == 2:
+            # Grayscale image without channel dimension
+            img = (img - self.mean[0]) / self.std[0]
         else:
-            img = img.astype(np.float32)
+            raise ValueError(
+                f"Unsupported image shape: {img.shape}. Expected (H, W), (H, W, 1), or (H, W, 3)"
+            )
 
         element[self.image_key] = img
         return element
+
+
+def unnormalize_image(
+    img: np.ndarray,
+    mean: tuple[float, ...] = (0.5, 0.5, 0.5),
+    std: tuple[float, ...] = (0.5, 0.5, 0.5),
+) -> np.ndarray:
+    """Unnormalize an image that was normalized with PyTorch-style normalization.
+
+    Formula: pixel_unnormalized = (pixel_normalized * std) + mean
+
+    Args:
+        img: Normalized image array
+        mean: Mean values used for normalization
+        std: Std values used for normalization
+
+    Returns:
+        Unnormalized image in [0, 1] range
+    """
+    mean = np.array(mean, dtype=np.float32)
+    std = np.array(std, dtype=np.float32)
+
+    # Apply inverse normalization: pixel_unnormalized = (pixel_normalized * std) + mean
+    if img.ndim == 3 and img.shape[-1] == len(mean):
+        # Multi-channel image (RGB)
+        unnormalized = (img * std.reshape(1, 1, -1)) + mean.reshape(1, 1, -1)
+    elif img.ndim == 3 and img.shape[-1] == 1:
+        # Grayscale image with channel dimension
+        unnormalized = (img * std[0]) + mean[0]
+    elif img.ndim == 2:
+        # Grayscale image without channel dimension
+        unnormalized = (img * std[0]) + mean[0]
+    else:
+        raise ValueError(f"Unsupported image shape: {img.shape}")
+
+    # Clip to [0, 1] range
+    return np.clip(unnormalized, 0.0, 1.0)
