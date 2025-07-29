@@ -267,8 +267,8 @@ def train_vae(cfg: DictConfig):
 
     # Load dataset
     logger.info("Loading dataset...")
-    image_column = cfg["image_column"]
-    target_columns = [image_column]
+    IMAGE_COLUMN = cfg["image_column"]
+    target_columns = [IMAGE_COLUMN]
 
     NORM_MEAN = tuple(cfg["norm_mean"])
     NORM_STD = tuple(cfg["norm_std"])
@@ -276,28 +276,28 @@ def train_vae(cfg: DictConfig):
     # Create data transforms pipeline
     train_transforms = [
         LoadFromBytesAndResize(
-            image_key=image_column,
+            image_key=IMAGE_COLUMN,
             width=config.image_size,
             height=config.image_size,
         ),
         NormalizeImage(
             mean=NORM_MEAN,
             std=NORM_STD,
-            image_key=image_column,
+            image_key=IMAGE_COLUMN,
         ),
         grain.Batch(batch_size=args.per_device_train_batch_size, drop_remainder=True),
     ]
 
     eval_transforms = [
         LoadFromBytesAndResize(
-            image_key=image_column,
+            image_key=IMAGE_COLUMN,
             width=config.image_size,
             height=config.image_size,
         ),
         NormalizeImage(
             mean=NORM_MEAN,
             std=NORM_STD,
-            image_key=image_column,
+            image_key=IMAGE_COLUMN,
         ),
         grain.Batch(batch_size=args.per_device_eval_batch_size, drop_remainder=True),
     ]
@@ -446,7 +446,7 @@ def train_vae(cfg: DictConfig):
                 global_step += 1  # Count every batch as a step
 
                 # Prepare batch - Convert to JAX arrays and get images
-                batch_images = jnp.array(batch["image"])
+                batch_images = jnp.array(batch[IMAGE_COLUMN])
 
                 # Handle extra batch dimensions (squeeze if ndim > 4)
                 if batch_images.ndim > 4:
@@ -518,7 +518,7 @@ def train_vae(cfg: DictConfig):
                 leave=False,
             ):
                 eval_batch_count += 1
-                batch_images = jnp.array(batch["image"])
+                batch_images = jnp.array(batch[IMAGE_COLUMN])
 
                 # Handle extra batch dimensions (squeeze if ndim > 4)
                 if batch_images.ndim > 4:
@@ -578,7 +578,7 @@ def train_vae(cfg: DictConfig):
                 # Get a small batch for comparison (real images)
                 try:
                     sample_batch = next(iter(eval_loader))
-                    sample_images = jnp.array(sample_batch["image"])
+                    sample_images = jnp.array(sample_batch[IMAGE_COLUMN])
 
                     # Handle extra batch dimensions (squeeze if ndim > 4)
                     if sample_images.ndim > 4:
