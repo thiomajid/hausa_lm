@@ -562,78 +562,50 @@ def train_vae(cfg: DictConfig):
         )
 
         # Generate and save sample images
-        try:
-            save_generated_samples(
-                model,
-                rngs,
-                cfg.get("num_samples_to_generate", 16),
-                output_dir / f"samples_epoch_{epoch + 1}.png",
-                mean=NORM_MEAN,
-                std=NORM_STD,
-            )
+        # Get a small batch from training data for comparison (real images and reconstructions)
+        sample_batch = next(iter(train_loader))
+        sample_images = jnp.array(sample_batch[IMAGE_COLUMN])
 
-            # Get a small batch from training data for comparison (real images and reconstructions)
-            try:
-                sample_batch = next(iter(train_loader))
-                sample_images = jnp.array(sample_batch[IMAGE_COLUMN])
+        # Handle extra batch dimensions (squeeze if ndim > 4)
+        if sample_images.ndim > 4:
+            sample_images = sample_images.squeeze(0)
 
-                # Handle extra batch dimensions (squeeze if ndim > 4)
-                if sample_images.ndim > 4:
-                    sample_images = sample_images.squeeze(0)
+        sample_images = jax.device_put(sample_images, DATA_SHARDING)
 
-                sample_images = jax.device_put(sample_images, DATA_SHARDING)
+        # Log reconstructions as well
+        reconstructions, _, _ = model(sample_images[:8], training=False)
 
-                # Log reconstructions as well
-                reconstructions, _, _ = model(sample_images[:8], training=False)
+        # Log images to TensorBoard (generated, real, and reconstructions)
+        log_images_to_tensorboard(
+            model,
+            rngs,
+            tb_logger,
+            global_step,
+            num_samples=8,
+            tag_prefix="epoch_end",
+            real_images=sample_images[:8],
+            mean=NORM_MEAN,
+            std=NORM_STD,
+        )
 
-                # Log images to TensorBoard (generated, real, and reconstructions)
-                log_images_to_tensorboard(
-                    model,
-                    rngs,
-                    tb_logger,
-                    global_step,
-                    num_samples=8,
-                    tag_prefix="epoch_end",
-                    real_images=sample_images[:8],
-                    mean=NORM_MEAN,
-                    std=NORM_STD,
-                )
+        # Log reconstructions separately
+        reconstructions_np = np.array(reconstructions)
+        reconstructions_np = unnormalize_image(
+            reconstructions_np,
+            mean=NORM_MEAN,
+            std=NORM_STD,
+        )
 
-                # Log reconstructions separately
-                reconstructions_np = np.array(reconstructions)
-                reconstructions_np = unnormalize_image(
-                    reconstructions_np,
-                    mean=NORM_MEAN,
-                    std=NORM_STD,
-                )
+        if model.config.channels == 1 and reconstructions_np.ndim == 3:
+            reconstructions_np = np.expand_dims(reconstructions_np, axis=-1)
 
-                if model.config.channels == 1 and reconstructions_np.ndim == 3:
-                    reconstructions_np = np.expand_dims(reconstructions_np, axis=-1)
-
-                tb_logger.log_images(
-                    "epoch_end/reconstructions",
-                    reconstructions_np,
-                    global_step,
-                    max_outputs=8,
-                    as_grid=True,
-                )
-
-            except Exception as e:
-                logger.warning(f"Could not get sample batch for comparison: {e}")
-                # Fallback to just generated images
-                log_images_to_tensorboard(
-                    model,
-                    rngs,
-                    tb_logger,
-                    global_step,
-                    num_samples=8,
-                    tag_prefix="epoch_end",
-                    mean=NORM_MEAN,
-                    std=NORM_STD,
-                )
-
-        except Exception as e:
-            logger.warning(f"Could not generate sample images: {e}")
+        tb_logger.log_images(
+            "epoch_end/reconstructions",
+            reconstructions_np,
+            global_step,
+            max_outputs=8,
+            as_grid=True,
+        )
 
         # Record epoch duration and log to TensorBoard
         epoch_duration = epoch_end_time - epoch_start_time
