@@ -354,13 +354,10 @@ class VAE(nnx.Module):
         self,
         x: jax.Array,
         *,
-        rngs: nnx.Rngs,
+        eps: jax.Array = None,
         training=False,
     ):
         mean, logvar = self.encode(x)
-
-        # Generate random noise outside of conditional to avoid trace level issues
-        eps = jax.random.normal(rngs.sample(), mean.shape)
 
         z = jax.lax.cond(
             training,
@@ -374,21 +371,16 @@ class VAE(nnx.Module):
 
     def generate(
         self,
-        num_samples: int,
-        *,
-        rngs: nnx.Rngs,
+        z: jax.Array,
     ):
-        """Generate new samples from the prior distribution.
+        """Generate new samples from provided latent codes.
 
         Args:
-            num_samples: Number of samples to generate
-            rngs: Random number generators
-            return_as_images: If True, return images in proper shape, otherwise flat
+            z: Latent codes to decode, shape (num_samples, latent_dim)
 
         Returns:
-            Generated samples as flat vectors or reshaped images
+            Generated samples
         """
-        z = jax.random.normal(rngs.sample(), (num_samples, self.config.latent_dim))
         return self.decode(z)
 
 

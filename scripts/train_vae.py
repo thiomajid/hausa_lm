@@ -41,6 +41,18 @@ from xlstm_jax.utils import str2dtype
 logger = logging.getLogger(__name__)
 
 
+def generate_epsilon(rngs: nnx.Rngs, batch_size: int, latent_dim: int) -> jax.Array:
+    """Generate epsilon for reparameterization trick outside of jitted functions."""
+    return jax.random.normal(rngs.sample(), (batch_size, latent_dim))
+
+
+def generate_latent_codes(
+    rngs: nnx.Rngs, num_samples: int, latent_dim: int
+) -> jax.Array:
+    """Generate latent codes from prior distribution outside of jitted functions."""
+    return jax.random.normal(rngs.sample(), (num_samples, latent_dim))
+
+
 def log_images_to_tensorboard(
     model: VAE,
     rngs: nnx.Rngs,
@@ -53,8 +65,11 @@ def log_images_to_tensorboard(
     real_images: jax.Array = None,
 ):
     """Log generated images to TensorBoard."""
-    # Generate samples
-    samples = model.generate(num_samples, rngs=rngs)
+    # Generate latent codes from prior distribution
+    z = generate_latent_codes(rngs, num_samples, model.config.latent_dim)
+
+    # Generate samples using the latent codes
+    samples = model.generate(z)
 
     # Convert samples to numpy for logging
     samples_np = np.array(samples)
@@ -100,13 +115,13 @@ def train_step(
     optimizer: nnx.Optimizer,
     metrics: nnx.MultiMetric,
     batch: jax.Array,
+    eps: jax.Array,
     beta: float,
-    rngs: nnx.Rngs,
-) -> tuple[nnx.Rngs, jax.Array]:
+) -> jax.Array:
     """Single training step."""
 
     def loss_fn(model: VAE) -> tuple[jax.Array, tuple[jax.Array, jax.Array, jax.Array]]:
-        reconstruction, mean, logvar = model(batch, rngs=rngs, training=True)
+        reconstruction, mean, logvar = model(batch, eps=eps, training=True)
         total_loss, reconstruction_loss, kl_loss = vae_loss(
             reconstruction, batch, mean, logvar, beta
         )
@@ -124,7 +139,7 @@ def train_step(
         kl_loss=kl_loss,
     )
 
-    return rngs, total_loss
+    return total_loss
 
 
 @partial(nnx.jit, static_argnames=("beta",))
@@ -132,11 +147,10 @@ def eval_step(
     model: VAE,
     metrics: nnx.MultiMetric,
     batch: jax.Array,
-    rngs: nnx.Rngs,
     beta: float,
 ) -> tuple[jax.Array, jax.Array, jax.Array]:
     """Single evaluation step."""
-    reconstruction, mean, logvar = model(batch, rngs=rngs, training=False)
+    reconstruction, mean, logvar = model(batch, training=False)
     total_loss, reconstruction_loss, kl_loss = vae_loss(
         reconstruction, batch, mean, logvar, beta
     )
@@ -160,8 +174,11 @@ def save_generated_samples(
     std: tuple[int, ...],
 ):
     """Generate and save sample images."""
-    # Generate samples in proper image format
-    samples = model.generate(num_samples, rngs=rngs)
+    # Generate latent codes from prior distribution
+    z = generate_latent_codes(rngs, num_samples, model.config.latent_dim)
+
+    # Generate samples using the latent codes
+    samples = model.generate(z)
 
     # Convert samples to numpy and unnormalize
     samples_np = np.array(samples)
@@ -455,14 +472,19 @@ def train_vae(cfg: DictConfig):
                 # Apply data sharding
                 batch_images = jax.device_put(batch_images, DATA_SHARDING)
 
+                # Generate epsilon for reparameterization trick outside jitted function
+                # We need epsilon with the same batch size and latent dimension
+                batch_size = batch_images.shape[0]
+                eps = generate_epsilon(rngs, batch_size, model.config.latent_dim)
+
                 # Training step
-                rngs, loss = train_step(
+                loss = train_step(
                     model=model,
                     optimizer=optimizer,
                     metrics=train_metrics,
                     batch=batch_images,
+                    eps=eps,
                     beta=beta,
-                    rngs=rngs,
                 )
 
                 # Check if it's time for optimizer step
@@ -531,7 +553,6 @@ def train_vae(cfg: DictConfig):
                     model=model,
                     metrics=eval_metrics,
                     batch=batch_images,
-                    rngs=rngs,
                     beta=beta,
                 )
         except Exception as e:
@@ -587,9 +608,7 @@ def train_vae(cfg: DictConfig):
                     sample_images = jax.device_put(sample_images, DATA_SHARDING)
 
                     # Log reconstructions as well
-                    reconstructions, _, _ = model(
-                        sample_images[:8], rngs=rngs, training=False
-                    )
+                    reconstructions, _, _ = model(sample_images[:8], training=False)
 
                     # Log images to TensorBoard (generated, real, and reconstructions)
                     log_images_to_tensorboard(
