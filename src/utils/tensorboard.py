@@ -201,7 +201,7 @@ class TensorBoardLogger:
             max_outputs: Maximum number of images to log if batch
         """
         if isinstance(image, jax.Array):
-            image = np.array(image)
+            image = np.array(jax.device_get(image))
 
         # Ensure image is in the range [0, 1]
         if image.max() <= 1.0 and image.min() >= 0.0:
@@ -212,7 +212,14 @@ class TensorBoardLogger:
             # Normalize to [0, 1]
             image = (image - image.min()) / (image.max() - image.min())
 
-        self.writer.image(tag, image, step, max_outputs=max_outputs)
+        if image.ndim != 4:
+            self.writer.image(tag, image, step, max_outputs=max_outputs)
+        else:
+            N = image.shape[0]
+            for idx in range(N):
+                self.writer.image(
+                    f"tag_{idx}", image[idx], step, max_outputs=max_outputs
+                )
 
     def log_images(
         self,

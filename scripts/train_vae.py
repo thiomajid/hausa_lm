@@ -70,23 +70,23 @@ def log_images_to_tensorboard(
     z = generate_latent_codes(rngs, num_samples, model.config.latent_dim)
 
     # Generate samples using the latent codes
-    samples = model.generate(z)
+    reconstructions = model.generate(z)
 
     # Convert samples to numpy for logging
-    samples_np = np.array(jax.device_get(samples))
+    reconstructions_np = np.array(jax.device_get(reconstructions))
 
     # Unnormalize generated samples (assuming they are normalized like inputs)
     # For VAE outputs, we assume they match the input normalization
-    samples_np = unnormalize_image(samples_np, mean, std)
+    reconstructions_np = unnormalize_image(reconstructions_np, mean, std)
 
     # If grayscale, add channel dimension
-    if model.config.channels == 1 and samples_np.ndim == 3:
-        samples_np = np.expand_dims(samples_np, axis=-1)
+    if model.config.channels == 1 and reconstructions_np.ndim == 3:
+        reconstructions_np = np.expand_dims(reconstructions_np, axis=-1)
 
     # Log generated images to TensorBoard
     tb_logger.log_images(
         f"{tag_prefix}/samples",
-        samples_np,
+        reconstructions_np,
         step,
         max_outputs=num_samples,
         as_grid=as_grid,
