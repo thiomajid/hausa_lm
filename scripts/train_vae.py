@@ -843,7 +843,7 @@ def train_vae(cfg: DictConfig):
     logger.info("Training and artifact saving completed!")
 
 
-@hydra.main(version_base=None, config_path="../configs", config_name="train_vae")
+@hydra.main(version_base="1.2", config_path="../configs", config_name="train_vae")
 def main(cfg: DictConfig) -> None:
     """Main entry point."""
     logger.info("Starting VAE training with config:")
