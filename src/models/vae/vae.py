@@ -36,7 +36,11 @@ class VAEConfig:
         self.hidden_dims = tuple(self.hidden_dims)
         self.kernel_size = tuple(self.kernel_size)
         self.strides = tuple(self.strides)
-        self.padding = tuple(self.padding)
+
+        if isinstance(self.padding, list):
+            self.padding = tuple(self.padding)
+        elif isinstance(self.padding, int):
+            self.padding = (self.padding,) * 2
 
     @property
     def input_dim(self) -> int:
@@ -63,7 +67,7 @@ class ConvBlock(nnx.Module):
             out_features,
             kernel_size=kernel_size,
             strides=strides,
-            padding=padding,
+            padding="SAME",
             rngs=rngs,
             dtype=dtype,
             param_dtype=param_dtype,
@@ -123,7 +127,7 @@ class ConvTransposeBlock(nnx.Module):
             out_features,
             kernel_size=kernel_size,
             strides=strides,
-            padding=padding,
+            padding="SAME",
             rngs=rngs,
             dtype=dtype,
             param_dtype=param_dtype,
@@ -189,7 +193,7 @@ class Encoder(nnx.Module):
                     out_dim,
                     kernel_size=config.kernel_size,
                     strides=config.strides,
-                    padding=config.padding,
+                    padding=config.padding,  # This will be ignored since we use "SAME"
                     mesh=mesh,
                     rngs=rngs,
                     dtype=dtype,
@@ -199,7 +203,12 @@ class Encoder(nnx.Module):
 
         self.layers = layers
 
-        post_conv_dim = 256 * 4 * 4
+        # Calculate the spatial dimensions after all conv layers
+        spatial_size = config.image_size
+        for _ in config.hidden_dims:
+            spatial_size = spatial_size // config.strides[0]  # Assuming square strides
+
+        post_conv_dim = config.hidden_dims[-1] * spatial_size * spatial_size
 
         # Output layers for mean and log variance
         Linear = partial(
@@ -250,7 +259,13 @@ class Decoder(nnx.Module):
     ):
         self.config = config
 
-        post_conv_dim = 256 * 4 * 4
+        # Calculate the spatial dimensions after all conv layers
+        spatial_size = config.image_size
+        for _ in config.hidden_dims:
+            spatial_size = spatial_size // config.strides[0]  # Assuming square strides
+
+        post_conv_dim = config.hidden_dims[-1] * spatial_size * spatial_size
+
         self.inner_proj = nnx.Linear(
             config.latent_dim,
             post_conv_dim,
@@ -269,6 +284,9 @@ class Decoder(nnx.Module):
             ),
         )
 
+        # Store spatial size for reshape
+        self.spatial_size = spatial_size
+
         hidden_dims = list(reversed(config.hidden_dims))
         shifted_dims = hidden_dims[1:]
         shifted_dims.append(config.channels)
@@ -282,7 +300,7 @@ class Decoder(nnx.Module):
                     out_dim,
                     kernel_size=config.kernel_size,
                     strides=config.strides,
-                    padding=config.padding,
+                    padding=config.padding,  # This will be ignored since we use "SAME"
                     mesh=mesh,
                     rngs=rngs,
                     dtype=dtype,
@@ -294,7 +312,9 @@ class Decoder(nnx.Module):
 
     def __call__(self, z: jax.Array):
         reconstruction = self.inner_proj(z)
-        reconstruction = reconstruction.reshape(-1, 4, 4, 256)
+        reconstruction = reconstruction.reshape(
+            -1, self.spatial_size, self.spatial_size, self.config.hidden_dims[-1]
+        )
 
         for layer in self.layers:
             reconstruction = layer(reconstruction)
@@ -359,11 +379,12 @@ class VAE(nnx.Module):
     ):
         mean, logvar = self.encode(x)
 
-        z = jax.lax.cond(
-            training,
-            lambda: self.reparameterize(mean, logvar, eps).astype(mean.dtype),
-            lambda: mean,
-        )
+        if training:
+            if eps is None:
+                raise ValueError("eps must be provided when training=True")
+            z = self.reparameterize(mean, logvar, eps).astype(mean.dtype)
+        else:
+            z = mean
 
         reconstruction = self.decode(z)
 
