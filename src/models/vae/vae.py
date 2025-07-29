@@ -32,6 +32,12 @@ class VAEConfig:
     strides: tuple[int, int] = (2, 2)
     padding: tuple[int, int] = (1, 1)
 
+    def __post_init__(self):
+        self.hidden_dims = tuple(self.hidden_dims)
+        self.kernel_size = tuple(self.kernel_size)
+        self.strides = tuple(self.strides)
+        self.padding = tuple(self.padding)
+
     @property
     def input_dim(self) -> int:
         return self.image_size * self.image_size * self.channels
