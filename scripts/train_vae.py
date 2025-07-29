@@ -305,37 +305,22 @@ def train_vae(cfg: DictConfig):
         grain.Batch(batch_size=args.per_device_train_batch_size, drop_remainder=True),
     ]
 
-    eval_transforms = [
-        LoadFromBytesAndResize(
-            image_key=IMAGE_COLUMN,
-            width=config.image_size,
-            height=config.image_size,
-        ),
-        NormalizeImage(
-            mean=NORM_MEAN,
-            std=NORM_STD,
-            image_key=IMAGE_COLUMN,
-        ),
-        grain.Batch(batch_size=args.per_device_eval_batch_size, drop_remainder=True),
-    ]
-
-    train_loader, eval_loader = create_dataloaders(
+    train_loader, _ = create_dataloaders(
         logger=logger,
         args=args,
         target_columns=target_columns,
         train_transforms=train_transforms,
-        eval_transforms=eval_transforms,
+        eval_transforms=None,  # No evaluation needed for VAE training
     )
 
     # Setup the training loop
     num_train_samples = len(train_loader._data_source)
-    num_eval_samples = len(eval_loader._data_source)
 
-    logger.info(f"Dataset sizes - Train: {num_train_samples}, Eval: {num_eval_samples}")
+    logger.info(f"Dataset size - Train: {num_train_samples}")
     steps_dict = compute_training_steps(
         args,
         train_samples=num_train_samples,
-        eval_samples=num_eval_samples,
+        eval_samples=0,  # No evaluation for VAE training
         logger=logger,
     )
 
@@ -392,12 +377,6 @@ def train_vae(cfg: DictConfig):
         kl_loss=nnx.metrics.Average("kl_loss"),
     )
 
-    eval_metrics = nnx.MultiMetric(
-        loss=nnx.metrics.Average("loss"),
-        reconstruction_loss=nnx.metrics.Average("reconstruction_loss"),
-        kl_loss=nnx.metrics.Average("kl_loss"),
-    )
-
     # TensorBoard logger
     tb_logger = TensorBoardLogger(log_dir=args.logging_dir, name="train")
 
@@ -409,7 +388,7 @@ def train_vae(cfg: DictConfig):
     CHECKPOINT_DIR = Path(cfg["checkpoint_save_dir"]).absolute()
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
-    BEST_METRIC_KEY = "eval_loss"
+    BEST_METRIC_KEY = "train_loss"
     CHECKPOINT_OPTIONS = ocp.CheckpointManagerOptions(
         max_to_keep=args.save_total_limit,
         best_fn=lambda metrics: metrics[BEST_METRIC_KEY],
@@ -429,9 +408,7 @@ def train_vae(cfg: DictConfig):
     logger.info(
         f"Effective Batch size = {args.per_device_train_batch_size * args.gradient_accumulation_steps}"
     )
-    logger.info(
-        f"Total batches per epoch: Train - {steps_dict['train_batches']} && Eval - {steps_dict['eval_batches']}"
-    )
+    logger.info(f"Total batches per epoch: Train - {steps_dict['train_batches']}")
     logger.info(f"Total steps = {max_steps}")
     logger.info(f"Total optimizer steps = {max_optimizer_steps}")
 
@@ -525,152 +502,115 @@ def train_vae(cfg: DictConfig):
                 pbar.set_postfix(postfix_data)
                 pbar.update(1)
 
-        # --- Evaluation after each epoch ---
-        eval_start_time = time.perf_counter()
-        logger.info(f"Starting evaluation after epoch {epoch + 1}...")
-        eval_metrics.reset()
+        # --- End of epoch processing ---
+        epoch_end_time = time.perf_counter()
 
-        eval_batch_count = 0
-        eval_data_available = True
+        # Get final training metrics for this epoch
+        epoch_train_metrics = train_metrics.compute()
+        current_train_loss = float(epoch_train_metrics.get("loss", float("inf")))
 
-        try:
-            for batch in tqdm(
-                eval_loader,
-                desc=f"Evaluating Epoch {epoch + 1}",
-                leave=False,
-            ):
-                eval_batch_count += 1
-                batch_images = jnp.array(batch[IMAGE_COLUMN])
+        # Log epoch training metrics to TensorBoard
+        for metric, value in epoch_train_metrics.items():
+            tb_logger.log_scalar(f"train_epoch/{metric}", value, global_step)
 
-                # Handle extra batch dimensions (squeeze if ndim > 4)
-                if batch_images.ndim > 4:
-                    batch_images = batch_images.squeeze(0)
-
-                # Apply data sharding
-                batch_images = jax.device_put(batch_images, DATA_SHARDING)
-
-                eval_step(
-                    model=model,
-                    metrics=eval_metrics,
-                    batch=batch_images,
-                    beta=beta,
-                )
-        except Exception as e:
-            logger.error(f"Error during evaluation: {e}")
-            eval_data_available = False
-
-        logger.info(f"Processed {eval_batch_count} evaluation batches")
-
-        if eval_batch_count > 0 and eval_data_available:
-            current_eval_metric = checkpoint_post_eval(
-                logger=logger,
-                model=model,
-                metrics=eval_metrics,
-                tb_logger=tb_logger,
-                global_step=global_step,
-                epoch=epoch,
-                best_metric_key=BEST_METRIC_KEY,
-                checkpoint_dir=CHECKPOINT_DIR,
-                checkpoint_options=CHECKPOINT_OPTIONS,
+        # Update manual best metric tracking based on training loss
+        if current_train_loss < best_metric_value:
+            best_metric_value = current_train_loss
+            best_step = global_step
+            logger.info(
+                f"New best {BEST_METRIC_KEY}: {best_metric_value:.6f} at step {best_step}"
             )
 
-            # Update manual best metric tracking
-            if current_eval_metric < best_metric_value:
-                best_metric_value = current_eval_metric
-                best_step = global_step
-                logger.info(
-                    f"New best {BEST_METRIC_KEY}: {best_metric_value:.6f} at step {best_step}"
-                )
+        # Update latest metrics for potential final checkpoint
+        latest_eval_metrics_for_ckpt = {BEST_METRIC_KEY: current_train_loss}
 
-            # Update latest metrics for potential final checkpoint
-            latest_eval_metrics_for_ckpt = {BEST_METRIC_KEY: current_eval_metric}
+        # Save checkpoint using train loss as metric
+        checkpoint_post_eval(
+            logger=logger,
+            model=model,
+            metrics=train_metrics,
+            tb_logger=tb_logger,
+            global_step=global_step,
+            epoch=epoch,
+            best_metric_key=BEST_METRIC_KEY,
+            checkpoint_dir=CHECKPOINT_DIR,
+            checkpoint_options=CHECKPOINT_OPTIONS,
+        )
 
-            # Generate and save sample images
+        # Generate and save sample images
+        try:
+            save_generated_samples(
+                model,
+                rngs,
+                cfg.get("num_samples_to_generate", 16),
+                output_dir / f"samples_epoch_{epoch + 1}.png",
+                mean=NORM_MEAN,
+                std=NORM_STD,
+            )
+
+            # Get a small batch from training data for comparison (real images and reconstructions)
             try:
-                save_generated_samples(
+                sample_batch = next(iter(train_loader))
+                sample_images = jnp.array(sample_batch[IMAGE_COLUMN])
+
+                # Handle extra batch dimensions (squeeze if ndim > 4)
+                if sample_images.ndim > 4:
+                    sample_images = sample_images.squeeze(0)
+
+                sample_images = jax.device_put(sample_images, DATA_SHARDING)
+
+                # Log reconstructions as well
+                reconstructions, _, _ = model(sample_images[:8], training=False)
+
+                # Log images to TensorBoard (generated, real, and reconstructions)
+                log_images_to_tensorboard(
                     model,
                     rngs,
-                    cfg.get("num_samples_to_generate", 16),
-                    output_dir / f"samples_epoch_{epoch + 1}.png",
+                    tb_logger,
+                    global_step,
+                    num_samples=8,
+                    tag_prefix="epoch_end",
+                    real_images=sample_images[:8],
                     mean=NORM_MEAN,
                     std=NORM_STD,
                 )
 
-                # Get a small batch for comparison (real images)
-                try:
-                    sample_batch = next(iter(eval_loader))
-                    sample_images = jnp.array(sample_batch[IMAGE_COLUMN])
+                # Log reconstructions separately
+                reconstructions_np = np.array(reconstructions)
+                reconstructions_np = unnormalize_image(
+                    reconstructions_np,
+                    mean=NORM_MEAN,
+                    std=NORM_STD,
+                )
 
-                    # Handle extra batch dimensions (squeeze if ndim > 4)
-                    if sample_images.ndim > 4:
-                        sample_images = sample_images.squeeze(0)
+                if model.config.channels == 1 and reconstructions_np.ndim == 3:
+                    reconstructions_np = np.expand_dims(reconstructions_np, axis=-1)
 
-                    sample_images = jax.device_put(sample_images, DATA_SHARDING)
-
-                    # Log reconstructions as well
-                    reconstructions, _, _ = model(sample_images[:8], training=False)
-
-                    # Log images to TensorBoard (generated, real, and reconstructions)
-                    log_images_to_tensorboard(
-                        model,
-                        rngs,
-                        tb_logger,
-                        global_step,
-                        num_samples=8,
-                        tag_prefix="epoch_end",
-                        real_images=sample_images[:8],
-                        mean=NORM_MEAN,
-                        std=NORM_STD,
-                    )
-
-                    # Log reconstructions separately
-                    reconstructions_np = np.array(reconstructions)
-                    reconstructions_np = unnormalize_image(
-                        reconstructions_np,
-                        mean=NORM_MEAN,
-                        std=NORM_STD,
-                    )
-
-                    if model.config.channels == 1 and reconstructions_np.ndim == 3:
-                        reconstructions_np = np.expand_dims(reconstructions_np, axis=-1)
-
-                    tb_logger.log_images(
-                        "epoch_end/reconstructions",
-                        reconstructions_np,
-                        global_step,
-                        max_outputs=8,
-                    )
-
-                except Exception as e:
-                    logger.warning(f"Could not get sample batch for comparison: {e}")
-                    # Fallback to just generated images
-                    log_images_to_tensorboard(
-                        model,
-                        rngs,
-                        tb_logger,
-                        global_step,
-                        num_samples=8,
-                        tag_prefix="epoch_end",
-                        mean=NORM_MEAN,
-                        std=NORM_STD,
-                    )
+                tb_logger.log_images(
+                    "epoch_end/reconstructions",
+                    reconstructions_np,
+                    global_step,
+                    max_outputs=8,
+                )
 
             except Exception as e:
-                logger.warning(f"Could not generate sample images: {e}")
+                logger.warning(f"Could not get sample batch for comparison: {e}")
+                # Fallback to just generated images
+                log_images_to_tensorboard(
+                    model,
+                    rngs,
+                    tb_logger,
+                    global_step,
+                    num_samples=8,
+                    tag_prefix="epoch_end",
+                    mean=NORM_MEAN,
+                    std=NORM_STD,
+                )
 
-        else:
-            logger.warning(
-                f"No evaluation data processed for epoch {epoch + 1}. Eval loader might be empty or misconfigured."
-            )
-
-        # Record evaluation duration and log to TensorBoard
-        eval_end_time = time.perf_counter()
-        eval_duration = eval_end_time - eval_start_time
-        tb_logger.log_scalar("timing/eval_duration", eval_duration, global_step)
-        logger.info(f"Evaluation completed in {eval_duration:.2f} seconds")
+        except Exception as e:
+            logger.warning(f"Could not generate sample images: {e}")
 
         # Record epoch duration and log to TensorBoard
-        epoch_end_time = time.perf_counter()
         epoch_duration = epoch_end_time - epoch_start_time
         epoch_durations.append(epoch_duration)
         tb_logger.log_scalar("timing/epoch_duration", epoch_duration, global_step)
@@ -778,7 +718,7 @@ def train_vae(cfg: DictConfig):
         "total_training_duration_hours": total_training_duration / 3600,
         "average_epoch_duration_seconds": avg_epoch_duration,
         "num_epochs_completed": len(epoch_durations),
-        "num_evaluations_completed": len(epoch_durations),  # One eval per epoch
+        "num_checkpoints_saved": len(epoch_durations),  # One checkpoint per epoch
     }
     with open(artifacts_dir / "timing_summary.json", "w") as f:
         json.dump(timing_summary, f, indent=4)
@@ -854,6 +794,8 @@ def train_vae(cfg: DictConfig):
             rngs,
             cfg.get("num_samples_to_generate", 16),
             artifacts_dir / "final_samples.png",
+            mean=NORM_MEAN,
+            std=NORM_STD,
         )
         logger.info("Final sample images saved.")
     except Exception as e:
