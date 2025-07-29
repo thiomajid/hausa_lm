@@ -63,6 +63,7 @@ def log_images_to_tensorboard(
     num_samples: int = 8,
     tag_prefix: str = "generated",
     real_images: jax.Array = None,
+    as_grid: bool = True,
 ):
     """Log generated images to TensorBoard."""
     # Generate latent codes from prior distribution
@@ -72,7 +73,7 @@ def log_images_to_tensorboard(
     samples = model.generate(z)
 
     # Convert samples to numpy for logging
-    samples_np = np.array(samples)
+    samples_np = np.array(jax.device_get(samples))
 
     # Unnormalize generated samples (assuming they are normalized like inputs)
     # For VAE outputs, we assume they match the input normalization
@@ -84,7 +85,11 @@ def log_images_to_tensorboard(
 
     # Log generated images to TensorBoard
     tb_logger.log_images(
-        f"{tag_prefix}/samples", samples_np, step, max_outputs=num_samples
+        f"{tag_prefix}/samples",
+        samples_np,
+        step,
+        max_outputs=num_samples,
+        as_grid=as_grid,
     )
 
     # Log real images for comparison if provided
@@ -103,7 +108,11 @@ def log_images_to_tensorboard(
             real_images_np = np.expand_dims(real_images_np, axis=-1)
 
         tb_logger.log_images(
-            f"{tag_prefix}/real", real_images_np, step, max_outputs=num_samples
+            f"{tag_prefix}/real",
+            real_images_np,
+            step,
+            max_outputs=num_samples,
+            as_grid=as_grid,
         )
 
     logger.info(f"Logged {num_samples} generated images to TensorBoard at step {step}")
@@ -606,6 +615,7 @@ def train_vae(cfg: DictConfig):
                     reconstructions_np,
                     global_step,
                     max_outputs=8,
+                    as_grid=True,
                 )
 
             except Exception as e:

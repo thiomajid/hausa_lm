@@ -9,6 +9,101 @@ import optax
 from flax.metrics.tensorboard import SummaryWriter
 
 
+def make_grid(
+    images: np.ndarray,
+    nrow: tp.Optional[int] = None,
+    padding: int = 2,
+    normalize: bool = False,
+    value_range: tp.Optional[tp.Tuple[float, float]] = None,
+    scale_each: bool = False,
+    pad_value: float = 0.0,
+) -> np.ndarray:
+    """Make a grid of images similar to torchvision.utils.make_grid.
+
+    Args:
+        images: Input images with shape (B, H, W, C) or (B, H, W)
+        nrow: Number of images displayed in each row of the grid.
+              If None, it's set to the square root of the number of images.
+        padding: Amount of padding between images
+        normalize: If True, shift the image to the range (0, 1)
+        value_range: Tuple (min, max) where min and max are numbers,
+                    then these numbers are used to normalize the image.
+        scale_each: If True, scale each image in the batch of images separately
+        pad_value: Value for the padded pixels
+
+    Returns:
+        Grid image with shape (H, W, C) or (H, W)
+    """
+    if not isinstance(images, np.ndarray):
+        images = np.array(images)
+
+    if images.ndim < 3 or images.ndim > 4:
+        raise ValueError(f"Images should be 3D or 4D array, got {images.ndim}D")
+
+    # Handle grayscale images (B, H, W) -> (B, H, W, 1)
+    if images.ndim == 3:
+        images = np.expand_dims(images, axis=-1)
+
+    nmaps, height, width, channels = images.shape
+
+    if nrow is None:
+        nrow = int(np.ceil(np.sqrt(nmaps)))
+
+    # Calculate grid dimensions
+    nrows = int(np.ceil(nmaps / nrow))
+
+    # Create the grid
+    grid_height = nrows * height + (nrows - 1) * padding
+    grid_width = nrow * width + (nrow - 1) * padding
+
+    if channels == 1:
+        grid = np.full((grid_height, grid_width), pad_value, dtype=images.dtype)
+    else:
+        grid = np.full(
+            (grid_height, grid_width, channels), pad_value, dtype=images.dtype
+        )
+
+    # Normalize if requested
+    if normalize or value_range is not None or scale_each:
+        images = images.copy()
+
+        if scale_each:
+            for i in range(nmaps):
+                img = images[i]
+                img_min, img_max = img.min(), img.max()
+                if img_max > img_min:
+                    images[i] = (img - img_min) / (img_max - img_min)
+        elif value_range is not None:
+            min_val, max_val = value_range
+            images = np.clip(images, min_val, max_val)
+            images = (images - min_val) / (max_val - min_val)
+        elif normalize:
+            img_min, img_max = images.min(), images.max()
+            if img_max > img_min:
+                images = (images - img_min) / (img_max - img_min)
+
+    # Fill the grid
+    for i in range(nmaps):
+        row = i // nrow
+        col = i % nrow
+
+        y_start = row * (height + padding)
+        y_end = y_start + height
+        x_start = col * (width + padding)
+        x_end = x_start + width
+
+        if channels == 1:
+            grid[y_start:y_end, x_start:x_end] = images[i, :, :, 0]
+        else:
+            grid[y_start:y_end, x_start:x_end] = images[i]
+
+    # Remove single channel dimension if present
+    if channels == 1:
+        return grid
+    else:
+        return grid
+
+
 class TensorBoardLogger:
     """Utility class for logging metrics and images to TensorBoard."""
 
@@ -125,23 +220,39 @@ class TensorBoardLogger:
         images: tp.Union[jax.Array, np.ndarray],
         step: int,
         max_outputs: int = 8,
+        nrow: tp.Optional[int] = None,
+        as_grid: bool = True,
     ):
-        """Log multiple images as a batch.
+        """Log multiple images as a batch or grid.
 
         Args:
             tag: Name for the images
-            images: Images array with shape (B, H, W, C)
+            images: Images array with shape (B, H, W, C) or (B, H, W)
             step: Global step
             max_outputs: Maximum number of images to log
+            nrow: Number of images per row in grid (if as_grid=True)
+            as_grid: If True, create a grid of images; if False, log individual images
         """
         if isinstance(images, jax.Array):
-            images = np.array(images)
+            images = np.array(jax.device_get(images))
 
         # Ensure we don't exceed max_outputs
         if images.shape[0] > max_outputs:
             images = images[:max_outputs]
 
-        self.log_image(tag, images, step, max_outputs=max_outputs)
+        if as_grid and images.shape[0] > 1:
+            # Create a grid of images
+            grid_image = make_grid(images, nrow=nrow, padding=2, normalize=True)
+            # Add batch dimension and channel dimension if needed
+            if grid_image.ndim == 2:  # Grayscale
+                grid_image = np.expand_dims(grid_image, axis=(0, -1))  # (1, H, W, 1)
+            elif grid_image.ndim == 3:  # Color
+                grid_image = np.expand_dims(grid_image, axis=0)  # (1, H, W, C)
+
+            self.log_image(tag, grid_image, step, max_outputs=1)
+        else:
+            # Log individual images
+            self.log_image(tag, images, step, max_outputs=max_outputs)
 
     def log_gradients(self, grads: tp.Dict[str, tp.Any], step: int):
         """Log gradient statistics.
