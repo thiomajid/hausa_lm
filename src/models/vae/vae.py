@@ -294,7 +294,7 @@ class Decoder(nnx.Module):
 
     def __call__(self, z: jax.Array):
         reconstruction = self.inner_proj(z)
-        reconstruction = reconstruction.reshape(-1, 256, 4, 4)
+        reconstruction = reconstruction.reshape(-1, 4, 4, 256)
 
         for layer in self.layers:
             reconstruction = layer(reconstruction)
