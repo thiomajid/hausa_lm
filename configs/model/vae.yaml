@@ -1,0 +1,13 @@
+# VAE Model Configuration
+# Supports any square image size and grayscale/RGB images
+
+# Image configuration - adjust based on your dataset
+image_size: 28 # Height and width of square images (e.g., 28 for MNIST, 32 for CIFAR-10)
+channels: 1 # Number of channels (1 for grayscale, 3 for RGB)
+
+# Network architecture
+hidden_dims: [512, 256] # Hidden layer dimensions
+latent_dim: 64 # Latent space dimensionality
+activation: "relu" # Activation function: "relu", "gelu", "swish"
+dropout_rate: 0.1 # Dropout probability
+use_batch_norm: true # Whether to use batch normalization
