@@ -242,7 +242,6 @@ def train_vae(cfg: DictConfig):
 
     model_config_dict = OmegaConf.to_container(cfg["model"], resolve=True)
     config = VAEConfig(**model_config_dict)
-    model: VAE = None
 
     mesh_shape = tuple(args.mesh_shape)
     axis_names = tuple(args.axes_names)
@@ -252,6 +251,7 @@ def train_vae(cfg: DictConfig):
     param_dtype = str2dtype(cfg["param_dtype"])
     rngs = nnx.Rngs(args.seed)
 
+    model: VAE = None
     with mesh:
         model = _create_sharded_model(
             rngs,
