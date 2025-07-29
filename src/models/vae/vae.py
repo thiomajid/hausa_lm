@@ -339,13 +339,11 @@ class VAE(nnx.Module):
         self,
         mean: jax.Array,
         logvar: jax.Array,
-        *,
-        rngs: nnx.Rngs,
+        eps: jax.Array,
     ):
         """Reparameterization trick to sample from latent distribution."""
 
         std = jnp.exp(0.5 * logvar)
-        eps = jax.random.normal(rngs.sample(), mean.shape)
         return mean + eps * std
 
     def decode(self, z: jax.Array):
@@ -360,9 +358,13 @@ class VAE(nnx.Module):
         training=False,
     ):
         mean, logvar = self.encode(x)
+
+        # Generate random noise outside of conditional to avoid trace level issues
+        eps = jax.random.normal(rngs.sample(), mean.shape)
+
         z = jax.lax.cond(
             training,
-            lambda: self.reparameterize(mean, logvar, rngs=rngs),
+            lambda: self.reparameterize(mean, logvar, eps),
             lambda: mean,
         )
 
