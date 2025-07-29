@@ -28,9 +28,9 @@ class VAEConfig:
     dropout_rate: float = 0.1
     use_batch_norm: bool = True
 
-    kernel_size = (4, 4)
-    strides = (2, 2)
-    padding = (1, 1)
+    kernel_size: tuple[int, int] = (4, 4)
+    strides: tuple[int, int] = (2, 2)
+    padding: tuple[int, int] = (1, 1)
 
     @property
     def input_dim(self) -> int:
