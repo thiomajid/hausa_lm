@@ -361,7 +361,7 @@ class VAE(nnx.Module):
 
         z = jax.lax.cond(
             training,
-            lambda: self.reparameterize(mean, logvar, eps),
+            lambda: self.reparameterize(mean, logvar, eps).astype(mean.dtype),
             lambda: mean,
         )
 
