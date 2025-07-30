@@ -1,0 +1,25 @@
+defaults:
+  - model: vae
+  - trainer: base
+  - _self_
+
+# Model configuration
+dtype: "bfloat16"
+param_dtype: "float32"
+image_column: "image"
+norm_mean: [0.5, 0.5, 0.5]
+norm_std: [0.5, 0.5, 0.5]
+
+beta: 1.0
+num_samples_to_generate: 8
+
+# Checkpoint loading/saving
+trust_remote_code: true
+resume_from_checkpoint: false
+checkpoint_hub_url: null
+checkpoint_revision: "main"
+checkpoint_save_dir: "./checkpoints"
+
+# Hub uploading
+model_hub_id: "thiomajid/vae_test"
+upload_message: "HuggingFace language model training completed"
