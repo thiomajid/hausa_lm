@@ -45,22 +45,21 @@
   subset: "default"
   samples: "all"
   text_column: "inputs"
-  filter_rules: 
+  filter_rules:
     - lhs: "language"
       op: "eq"
       rhs: "Hausa"
-    
+
     - lhs: "inputs"
       op: "ne"
       rhs: null
-
 
 - hub_id: "CohereLabs/aya_dataset"
   split: "train"
   subset: "default"
   samples: "all"
   text_column: "targets"
-  filter_rules: 
+  filter_rules:
     - lhs: "language"
       op: "eq"
       rhs: "Hausa"
@@ -68,14 +67,13 @@
     - lhs: "targets"
       op: "ne"
       rhs: null
-
 
 - hub_id: "CohereLabs/aya_dataset"
   split: "test"
   subset: "default"
   samples: "all"
   text_column: "inputs"
-  filter_rules: 
+  filter_rules:
     - lhs: "language"
       op: "eq"
       rhs: "Hausa"
@@ -89,7 +87,7 @@
   subset: "default"
   samples: "all"
   text_column: "targets"
-  filter_rules: 
+  filter_rules:
     - lhs: "language"
       op: "eq"
       rhs: "Hausa"
@@ -98,15 +96,21 @@
       op: "ne"
       rhs: null
 
-- hub_id: "Owen1u/Reddit-Amazon-5M-hausa"
-  split: "train"
-  samples: 5_000
-  text_column: "text"
-  filter_rules: null
-
+# - hub_id: "Owen1u/Reddit-Amazon-5M-hausa"
+#   split: "train"
+#   samples: 5_000
+#   text_column: "text"
+#   filter_rules: null
 
 - hub_id: "jonathansuru/hausa_bert"
   split: "train"
   samples: "all"
   text_column: "hau"
+  filter_rules: null
+
+- hub_id: "HuggingFaceFW/finewiki"
+  split: "train"
+  subset: "ha"
+  samples: "all"
+  text_column: "text"
   filter_rules: null
