@@ -49,7 +49,6 @@ def load_and_cache_raw_dataset(
             split=split,
             streaming=True if num_samples != "all" else False,
             token=token,
-            trust_remote_code=trust_remote_code,
         )
     else:
         data_stream = load_dataset(
