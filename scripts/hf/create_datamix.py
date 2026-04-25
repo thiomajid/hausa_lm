@@ -1,8 +1,8 @@
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from src.data.mixture import DataMixConfig, MixDatasetConfig, push_datamix_to_hub
-from src.data.rules import BinaryFilterRule
+from src.data.v1.mixture import DataMixConfig, MixDatasetConfig, push_datamix_to_hub
+from src.data.v1.rules import BinaryFilterRule
 
 
 @hydra.main(config_path="../configs", config_name="data_mix_config", version_base="1.2")

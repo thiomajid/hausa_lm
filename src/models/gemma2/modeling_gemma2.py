@@ -9,8 +9,6 @@ from jax import lax
 from jax.sharding import Mesh
 from transformers.models.gemma2 import Gemma2Config
 
-from xlstm_jax.mask import apply_padding_mask_with_gradient_stop, create_padding_mask
-
 from ...utils.devices import create_mesh
 from ...utils.inference import GenerationCarry
 

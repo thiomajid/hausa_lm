@@ -8,7 +8,7 @@ from huggingface_hub import upload_file
 from omegaconf import DictConfig, OmegaConf
 from transformers import AutoTokenizer
 
-from src.data.hf import load_and_cache_raw_dataset
+from src.data.v1.hf import load_and_cache_raw_dataset
 
 
 @dataclass

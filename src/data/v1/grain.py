@@ -4,7 +4,7 @@ import grain.python as grain
 from datasets import Dataset as HfDataset
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 
-from src.data.hf import get_dataset
+from src.data.v1.hf import get_dataset
 from src.trainer.base_arguments import BaseTrainingArgs
 
 
